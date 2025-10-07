@@ -8,6 +8,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import pdfParse from "pdf-parse";
+import { put, head } from "@vercel/blob";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -155,15 +156,44 @@ app.post("/upload/:transferId", upload.single("file"), (req, res) => {
   const t = transfers.get(transferId);
   if (!t || t.status !== "open") return res.status(410).send("Transfer expired or invalid");
 
-  const meta = { 
-    name: req.file.originalname, 
-    size: req.file.size, 
-    mimetype: req.file.mimetype,
-    uploadedAt: new Date().toISOString()
-  };
-  t.files.push(meta);
-  broadcast(transferId, { type: "file", file: meta });
-  res.sendStatus(204);
+  (async () => {
+    // Prepare metadata
+    const meta = {
+      name: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+      uploadedAt: new Date().toISOString()
+    };
+
+    try {
+      // Read the file saved by multer and upload to Vercel Blob
+      const localFilePath = path.join(uploadsRoot, transferId, req.file.originalname);
+      const fileBuffer = fs.readFileSync(localFilePath);
+      const blobKey = `files/${transferId}/${req.file.originalname}`;
+
+      const result = await put(blobKey, fileBuffer, {
+        contentType: req.file.mimetype,
+        access: "public",
+        allowOverwrite: true
+      });
+
+      // Attach blob info to metadata
+      meta.url = result.url;
+      meta.blobKey = blobKey;
+
+      // Optional: remove local file to save disk space
+      try { fs.unlinkSync(localFilePath); } catch (_) {}
+    } catch (e) {
+      // If blob upload fails, keep local file; still record meta without url
+      // This allows the desktop to continue functioning locally.
+      // You can inspect logs and retry manually if needed.
+      console.error("Blob upload failed:", e);
+    }
+
+    t.files.push(meta);
+    broadcast(transferId, { type: "file", file: meta });
+    res.sendStatus(204);
+  })();
 });
 
 // 4) Mark done
@@ -222,13 +252,24 @@ app.get("/pdf-content/:transferId/:filename", async (req, res) => {
   if (!t) return res.status(404).json({ error: "Transfer not found" });
   
   try {
-    const filePath = path.join(uploadsRoot, transferId, filename);
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: "File not found" });
+    // Prefer Blob if URL is present in metadata; otherwise fall back to local disk
+    const meta = t.files.find(f => f.name === filename);
+    let dataBuffer;
+
+    if (meta && meta.url) {
+      const response = await fetch(meta.url);
+      if (!response.ok) return res.status(404).json({ error: "Blob file not accessible" });
+      const arr = await response.arrayBuffer();
+      dataBuffer = Buffer.from(arr);
+    } else {
+      const filePath = path.join(uploadsRoot, transferId, filename);
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      dataBuffer = fs.readFileSync(filePath);
     }
     
     // Read and parse the PDF file
-    const dataBuffer = fs.readFileSync(filePath);
     const pdfData = await pdfParse(dataBuffer);
     
     // Extract text content
