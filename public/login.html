@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMDCare - Läkare inloggning</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 16px;
+            background: #F0F2F5;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .card {
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 24px;
+            background: white;
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .logo {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 12px;
+            object-fit: contain;
+            filter: brightness(0) saturate(100%) invert(8%) sepia(8%) saturate(2000%) hue-rotate(200deg) brightness(0.9) contrast(1.1);
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0 0 8px 0;
+        }
+        
+        .subtitle {
+            color: #6b7280;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        
+        .login-options {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .login-option {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .login-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 8px 0;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        
+        .login-divider::before,
+        .login-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .login-divider span {
+            padding: 0 12px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: none;
+            background: #1d4ed8;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.2s ease;
+        }
+        
+        button:hover {
+            background: #1e40af;
+        }
+        
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .bankid-button {
+            background: #F0F2F5;
+            color: #000000;
+            border: 1px solid #e5e7eb;
+            padding: 12px;
+        }
+        
+        .bankid-button:hover {
+            background: #e0e6ed;
+            border-color: #d1d5db;
+        }
+        
+        .bankid-logo {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+        
+        .test-button {
+            background: #059669;
+        }
+        
+        .test-button:hover {
+            background: #047857;
+        }
+        
+        .status {
+            text-align: center;
+            margin-top: 16px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .success {
+            color: #059669;
+        }
+        
+        .error {
+            color: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <img src="/Assets/mmdconnect.png" alt="MMDCare" class="logo">
+            <h1>MMDCare</h1>
+            <p class="subtitle">Logga in för att komma åt MMDCare-plattformen</p>
+        </div>
+        
+        <div class="login-options">
+            <!-- BankID Login -->
+            <div class="login-option">
+                <button id="bankidButton" class="bankid-button" onclick="handleBankIDLogin()">
+                    <img src="/Assets/BankID.png" alt="BankID" class="bankid-logo">
+                    Logga in med BankID
+                </button>
+            </div>
+            
+            <div class="login-divider">
+                <span>eller</span>
+            </div>
+            
+            <!-- Test Login -->
+            <div class="login-option">
+                <button id="testButton" class="test-button" onclick="handleTestLogin()">
+                    Testa inloggning
+                </button>
+            </div>
+        </div>
+        
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        function setStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+        }
+
+        function clearStatus() {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = '';
+            statusEl.className = 'status';
+            statusEl.style.display = 'none';
+        }
+
+
+        function handleBankIDLogin() {
+            clearStatus();
+            setStatus('Startar BankID...', 'success');
+            
+            setTimeout(() => {
+                authenticateUser('bankid');
+            }, 800);
+        }
+
+        function handleTestLogin() {
+            clearStatus();
+            
+            setStatus('Loggar in med testkonto...', 'success');
+            
+            // Authenticate immediately for testing
+            setTimeout(() => {
+                authenticateUser('test');
+            }, 500);
+        }
+
+        function authenticateUser(method, data = {}) {
+            // Store authentication in localStorage
+            const authData = {
+                authenticated: true,
+                method: method,
+                timestamp: new Date().toISOString(),
+                ...data
+            };
+            
+            localStorage.setItem('mmdcare_auth', JSON.stringify(authData));
+            
+            // Set flag to indicate we're coming from login page
+            sessionStorage.setItem('fromLogin', 'true');
+            
+            // Redirect to main page (index.html) immediately
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
