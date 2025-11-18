@@ -233,6 +233,57 @@ body {
     margin-bottom: 16px;
 }
 
+.upload-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.clear-files-btn {
+    background: #fff;
+    color: #111827;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    width: 44px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.08);
+}
+
+.clear-files-btn:hover {
+    border-color: #94a3b8;
+    box-shadow: 0 6px 12px rgba(15, 23, 42, 0.12);
+}
+
+.clear-files-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.clear-files-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
 .organ-list {
     display: flex;
     flex-direction: column;
@@ -267,6 +318,46 @@ body {
 
 .organ-item-link:hover .organ-item {
     background: #F0F2F5;
+}
+
+.provsvar-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px;
+    background: #f5f7fb;
+    border-radius: 12px;
+}
+
+.provsvar-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.provsvar-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.provsvar-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex: 1;
+}
+
+.provsvar-card .status-indicator {
+    position: static;
+    border: none;
+    width: 10px;
+    height: 10px;
+}
+
+.status-indicator.bad {
+    background-color: #dc2626;
 }
 
 .journal-content {
@@ -1031,6 +1122,9 @@ body {
     border: 1px solid #e9ecef;
     border-radius: 8px;
     padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .delete-info-title {
@@ -1045,6 +1139,58 @@ body {
     color: #666;
     line-height: 1.5;
     margin: 0;
+}
+
+.delete-info-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.select-all-btn {
+    background: #f8fafc;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.delete-files-list {
+    max-height: 240px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.delete-file-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.delete-file-checkbox {
+    margin-top: 4px;
+}
+
+.delete-file-item .file-name {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.delete-file-item .file-meta {
+    display: block;
+    font-size: 12px;
+    color: #6b7280;
 }
 
 .delete-modal-actions {

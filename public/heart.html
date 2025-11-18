@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hjärta - MMDCare Platform</title>
+    <title>Provsvar - MMDCare Platform</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -57,14 +57,10 @@
         <main class="main-content">
             <div class="content-header">
                 <div class="patient-info">
-                    <h1>Patient: Anders Boman</h1>
+                    <h1>Patient: <span data-patient-name="full">Anders Boman</span></h1>
                     <div class="organ-title-header">
-                        <h2>Hjärta</h2>
-                        <div class="icon-container">
-                            <img src="Assets/heart.png" alt="Hjärta" class="organ-page-icon">
-                            <div class="status-indicator good"></div>
-                        </div>
-                        <p class="organ-subtitle">Hjärtfunktion och kardiovaskulär hälsa</p>
+                        <h2>Provsvar</h2>
+                        <p class="organ-subtitle">Laboratorieresultat och analyser</p>
                     </div>
                 </div>
                 <div class="user-info">
@@ -954,9 +950,10 @@
             }
             
             // Collect heart data with actual Excel data
+            const patientName = getStoredPatientName();
             const heartData = {
-                title: 'Hjärtdata - Anders Boman',
-                content: `# Hjärtdata Analys
+                title: `Provsvar - ${patientName}`,
+                content: `# Provsvarsanalys för ${patientName}
 
 ### Datum
 ${todayString}
@@ -974,10 +971,10 @@ ${todayString}
 - **Hjärtfrekvensvariabilitet:** Inom normala gränser
 
 ### Sammanfattning
-Patientens hjärtdata visar optimala värden med inga avvikelser. Alla vitala parametrar är inom normala gränser och indikerar god hjärtkärlhälsa.
+Patientens provsvar visar optimala värden med inga avvikelser. Alla parametrar är inom normala gränser och indikerar god hälsa.
 
 ---
-*Denna analys har genererats av Hälsa+GPT baserat på aktuella hjärtdata.*`,
+*Denna analys har genererats av Hälsa+GPT baserat på aktuella provsvar.*`,
                 timestamp: new Date().toISOString(),
                 isHeartData: true
             };

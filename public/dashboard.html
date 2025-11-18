@@ -54,11 +54,11 @@
         <main class="main-content">
             <div class="content-header">
                 <div class="patient-info">
-                    <h1 id="patient-name-header">Patient: Anders Boman</h1>
+                    <h1 id="patient-name-header">Patient: <span data-patient-name="full">Anders Boman</span></h1>
                     <p class="patient-date">2024-09-09</p>
                 </div>
                 <div class="user-info">
-                    <span class="user-name">Dr. Anna Andersson</span>
+                    <span class="user-name" data-doctor-name-source data-doctor-name="full">Dr. Anna Andersson</span>
                     <div class="user-avatar">AA</div>
                 </div>
             </div>
@@ -77,27 +77,37 @@
                     <!-- Right Column - 50% Width with stacked cards -->
                     <div class="right-column">
                     <div class="health-card card-animate">
-                        <h2 class="card-title">Hälsodata</h2>
+                        <h2 class="card-title">Provsvar</h2>
                         <div class="organ-list">
                             <a href="heart.html" class="organ-item-link">
-                                <div class="organ-item">
-                                    <div class="organ-header">
-                                        <div class="icon-container">
-                                            <img src="Assets/heart.png" alt="Heart" class="organ-icon">
-                                            <div class="status-indicator good"></div>
+                                <div class="organ-item provsvar-card">
+                                    <div class="provsvar-main">
+                                        <h3 class="organ-name">Provsvar</h3>
+                                        <div class="provsvar-status">
+                                            <span id="provsvarStatusIndicator" class="status-indicator bad"></span>
+                                            <span id="provsvarDataState" class="data-count">Ingen data tillgänglig</span>
                                         </div>
-                                        <h3 class="organ-name">Hjärta</h3>
-                                        <span class="data-count">Data tillgänglig</span>
-                                        <div class="chevron">›</div>
                                     </div>
+                                    <div class="chevron">›</div>
                                 </div>
                             </a>
-                            </div>
                         </div>
+                    </div>
 
                         <!-- File Upload Section -->
                         <div class="upload-card card-animate">
-                            <h2 class="card-title">Mottagna filer</h2>
+                            <div class="upload-card-header">
+                                <h2 class="card-title">Mottagna filer</h2>
+                                <button type="button" class="clear-files-btn" onclick="openUploadsDeleteOverlay()" title="Radera filer">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M3 6h18" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                                        <path d="M10 11v6M14 11v6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                                        <path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                                    </svg>
+                                    <span class="sr-only">Radera filer</span>
+                                </button>
+                            </div>
                             <div class="file-categories" id="file-categories">
                                 <!-- File categories will be populated here -->
                             </div>
@@ -129,6 +139,8 @@
         let uploadedFiles = [];
         let currentTransferId = null;
         let eventSource = null;
+        let lastServerFileCount = 0;
+        let currentSessionId = null;
 
         function logout() {
             showLogoutOverlay();
@@ -140,12 +152,14 @@
             // If we're being redirected from index.html after upload, sessionStartTime should already exist
             // If it doesn't exist, this is a new session after logout - set it now
             if (!localStorage.getItem('sessionStartTime')) {
+                localStorage.removeItem('uploadNotificationShownForSession');
                 const sessionStartTime = Date.now();
                 localStorage.setItem('sessionStartTime', sessionStartTime.toString());
                 console.log('New session started after logout, timestamp:', sessionStartTime);
             } else {
                 console.log('Existing session, timestamp:', localStorage.getItem('sessionStartTime'));
             }
+            currentSessionId = localStorage.getItem('sessionStartTime');
             
             // Update patient name immediately on page load
             const savedPatientName = localStorage.getItem('currentPatientName');
@@ -183,9 +197,6 @@
             
             if (categoriesContainer) {
                 categoriesContainer.innerHTML = '<p class="empty-category">Laddar filer...</p>';
-            }
-            if (journalContent) {
-                journalContent.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 20px;">Laddar...</p>';
             }
             
             // Update patient name from localStorage
@@ -294,6 +305,7 @@
                     uploadedFiles = data.files || [];
                     console.log('✅ Number of files loaded from API:', uploadedFiles.length);
                     console.log('Files details:', uploadedFiles);
+                    lastServerFileCount = uploadedFiles.length;
                     
                     // Display files if we have any
                     if (uploadedFiles.length > 0) {
@@ -325,6 +337,7 @@
                     
                     // API failed - clear everything
                     uploadedFiles = [];
+                    lastServerFileCount = 0;
                     updateFileDisplay();
                     console.log('API failed - cleared all data');
                 }
@@ -332,6 +345,7 @@
                 console.error('Failed to load uploaded files from mobile app:', error);
                 // On error - clear everything
                 uploadedFiles = [];
+                lastServerFileCount = 0;
                 updateFileDisplay();
             }
         }
@@ -604,8 +618,8 @@
             console.log('EventSource not available for cross-origin serverless apps - using polling instead');
             
             // CRITICAL: Store initial file count to detect NEW uploads only
-            const initialFileCount = uploadedFiles.length;
-            console.log('Starting file event stream with initial file count:', initialFileCount);
+            lastServerFileCount = uploadedFiles.length;
+            console.log('Starting file event stream with current file count:', lastServerFileCount);
             
             // Start polling for new files every 10 seconds
             const pollForFiles = async () => {
@@ -622,11 +636,11 @@
                         
                         // CRITICAL: Only update if we have MORE files than when we started
                         // This ensures we only show files uploaded in THIS session
-                        if (serverFiles.length > initialFileCount) {
+                        if (serverFiles.length > lastServerFileCount) {
                             console.log('New files detected, refreshing display');
                             
-                            // Only get the NEW files (after initial count)
-                            const newFiles = serverFiles.slice(initialFileCount);
+                            // Only get the NEW files (after last count)
+                            const newFiles = serverFiles.slice(lastServerFileCount);
                             
                             // Show notification for each new file
                             newFiles.forEach(file => {
@@ -638,11 +652,13 @@
                             saveFilesToStorage();
                             updateFileDisplay();
                             await loadImportedJournalNotes();
-                        } else if (serverFiles.length < uploadedFiles.length) {
+                            lastServerFileCount = serverFiles.length;
+                        } else if (serverFiles.length < lastServerFileCount) {
                             // Server has fewer files - reset to server state (logout cleared them)
                             console.log('Server has fewer files - resetting to server state');
                             uploadedFiles = serverFiles;
                             updateFileDisplay();
+                            lastServerFileCount = serverFiles.length;
                         }
                     }
                 } catch (error) {
@@ -664,6 +680,8 @@
             if (uploadedFiles.length === 0) {
                 console.log('No files to display, showing empty message');
                 categoriesContainer.innerHTML = '<p class="empty-category">Inga filer att visa</p>';
+                showEmptyJournalState();
+                updateProvsvarStatus();
                 return;
             }
 
@@ -692,6 +710,24 @@
             
             console.log(`Total files displayed: ${totalDisplayed}`);
             console.log('=== END UPDATE FILE DISPLAY ===');
+            updateProvsvarStatus();
+        }
+
+        function updateProvsvarStatus() {
+            const indicator = document.getElementById('provsvarStatusIndicator');
+            const stateEl = document.getElementById('provsvarDataState');
+            if (!indicator || !stateEl) return;
+            
+            const hasExcelData = uploadedFiles.some(file =>
+                file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                file.mimetype === 'application/vnd.ms-excel' ||
+                file.name.toLowerCase().endsWith('.xlsx') ||
+                file.name.toLowerCase().endsWith('.xls')
+            );
+            
+            indicator.classList.remove('good', 'bad');
+            indicator.classList.add(hasExcelData ? 'good' : 'bad');
+            stateEl.textContent = hasExcelData ? 'Data tillgänglig' : 'Ingen data tillgänglig';
         }
 
         function createCategoryElement(config, files) {
@@ -846,6 +882,12 @@
             `;
             
             if (file.size === 0) {
+                const sessionId = localStorage.getItem('sessionStartTime') || 'default';
+                const alreadyShown = localStorage.getItem('uploadNotificationShownForSession');
+                if (alreadyShown === sessionId) {
+                    return;
+                }
+                localStorage.setItem('uploadNotificationShownForSession', sessionId);
                 // Special case for welcome message
                 notification.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 12px;">
@@ -936,6 +978,7 @@
         function clearAllFiles() {
             // Clear all saved files (for logout or manual clear)
             uploadedFiles = [];
+            lastServerFileCount = 0;
             
             // Clear ALL localStorage file data
             Object.keys(localStorage).forEach(key => {
@@ -958,8 +1001,152 @@
             }
             
             updateFileDisplay();
+            showEmptyJournalState();
+            updateProvsvarStatus();
             
             console.log('Cleared all files and localStorage');
+        }
+
+        async function performDeleteUploads(selectedIds = null) {
+            if (!uploadedFiles.length) {
+                showEmptyJournalState();
+                updateProvsvarStatus();
+                return;
+            }
+            const transferToDelete = currentTransferId || localStorage.getItem('currentTransferId');
+            
+            if (!selectedIds || selectedIds.length === uploadedFiles.length) {
+                clearAllFiles();
+                showEmptyJournalState();
+                updateProvsvarStatus();
+                
+                if (transferToDelete) {
+                    try {
+                        await fetch(`/delete-all/${transferToDelete}`, { method: 'DELETE' });
+                        console.log('Deleted files for transfer:', transferToDelete);
+                    } catch (error) {
+                        console.warn('Failed to delete transfer files on server (expected on Vercel):', error);
+                    }
+                }
+                return;
+            }
+            
+            uploadedFiles = uploadedFiles.filter(file => !selectedIds.includes(file.name));
+            saveFilesToStorage();
+            updateFileDisplay();
+            await loadImportedJournalNotes();
+            updateProvsvarStatus();
+            
+            if (transferToDelete) {
+                try {
+                    await fetch(`/api/files?transferId=${transferToDelete}&delete=${selectedIds.map(encodeURIComponent).join(',')}`, {
+                        method: 'POST'
+                    });
+                } catch (error) {
+                    console.warn('Partial delete endpoint not implemented, local files removed only');
+                }
+            }
+        }
+
+        function openUploadsDeleteOverlay() {
+            if (!uploadedFiles.length) {
+                showEmptyJournalState();
+                updateProvsvarStatus();
+                return;
+            }
+            
+            const dateLabel = new Date().toLocaleDateString('sv-SE');
+            const filesList = uploadedFiles.map(file => `
+                <label class="delete-file-item">
+                    <input type="checkbox" class="delete-file-checkbox" value="${file.name}" checked>
+                    <span>
+                        <span class="file-name">${file.name}</span>
+                        <span class="file-meta">${new Date(file.uploadedAt).toLocaleDateString('sv-SE')} • ${Math.round(file.size/1024)} KB</span>
+                    </span>
+                </label>
+            `).join('');
+            
+            const title = uploadedFiles.length === 1 ? uploadedFiles[0].name : `${uploadedFiles.length} filer valda`;
+            const dateLabel = new Date().toLocaleDateString('sv-SE');
+            
+            const overlayHTML = `
+                <div class="delete-overlay" id="uploadsDeleteOverlay">
+                    <div class="delete-modal">
+                        <div class="delete-modal-header">
+                            <h2 class="delete-modal-title">Radera filer</h2>
+                            <p class="delete-modal-subtitle">Är du säker på att du vill radera alla mottagna filer?</p>
+                        </div>
+                        <div class="delete-modal-content">
+                            <div class="delete-info-card">
+                                <div class="delete-info-header">
+                                    <div>
+                                        <h4 class="delete-info-title">${title}</h4>
+                                        <p class="delete-info-text">Datum: ${dateLabel}</p>
+                                    </div>
+                                    <button class="select-all-btn" onclick="toggleSelectAllFiles()">Markera alla</button>
+                                </div>
+                                <div class="delete-files-list">
+                                    ${filesList}
+                                </div>
+                                <p class="delete-info-text" style="margin-top: 12px; font-style: italic; color: #999;">Denna åtgärd kan inte ångras.</p>
+                            </div>
+                        </div>
+                        <div class="delete-modal-actions">
+                            <button class="delete-btn-cancel" onclick="closeUploadsDeleteOverlay()">Avbryt</button>
+                            <button class="delete-btn-confirm" onclick="confirmUploadsDelete()">
+                                <svg class="delete-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3,6 5,6 21,6"></polyline>
+                                    <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                                </svg>
+                                Radera
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', overlayHTML);
+            const overlay = document.getElementById('uploadsDeleteOverlay');
+            requestAnimationFrame(() => overlay.classList.add('active'));
+            
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    closeUploadsDeleteOverlay();
+                }
+            });
+            
+            document.addEventListener('keydown', handleUploadsDeleteEscapeKey);
+        }
+
+        function closeUploadsDeleteOverlay() {
+            const overlay = document.getElementById('uploadsDeleteOverlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+                setTimeout(() => overlay.remove(), 300);
+            }
+            document.removeEventListener('keydown', handleUploadsDeleteEscapeKey);
+        }
+
+        function handleUploadsDeleteEscapeKey(e) {
+            if (e.key === 'Escape') {
+                closeUploadsDeleteOverlay();
+            }
+        }
+
+        async function confirmUploadsDelete() {
+            const confirmBtn = document.querySelector('#uploadsDeleteOverlay .delete-btn-confirm');
+            if (!confirmBtn) return;
+            const originalText = confirmBtn.innerHTML;
+            confirmBtn.innerHTML = 'Raderar...';
+            confirmBtn.disabled = true;
+            
+            await performDeleteUploads();
+            
+            confirmBtn.innerHTML = originalText;
+            confirmBtn.disabled = false;
+            closeUploadsDeleteOverlay();
         }
 
 
@@ -1027,7 +1214,8 @@
                     key === 'currentTransferId' ||
                     key === 'currentPatientName' ||
                     key === 'uploadedFiles' ||
-                    key === 'sessionStartTime') {
+                    key === 'sessionStartTime' ||
+                    key === 'uploadNotificationShownForSession') {
                     localStorage.removeItem(key);
                     console.log('Deleted:', key);
                 }

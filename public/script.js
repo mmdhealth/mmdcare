@@ -1,3 +1,33 @@
+function getStoredPatientName() {
+    const name = localStorage.getItem('currentPatientName');
+    if (!name || !name.trim()) {
+        return 'Patient';
+    }
+    return name;
+}
+
+function getStoredPatientFirstName() {
+    const fullName = getStoredPatientName();
+    const first = fullName.split(' ')[0];
+    return first || fullName;
+}
+
+function applyPatientNameLabels() {
+    const fullName = getStoredPatientName();
+    const firstName = getStoredPatientFirstName();
+    document.querySelectorAll('[data-patient-name="full"]').forEach(el => {
+        el.textContent = fullName;
+    });
+    document.querySelectorAll('[data-patient-name="first"]').forEach(el => {
+        el.textContent = firstName;
+    });
+}
+
+window.getStoredPatientName = getStoredPatientName;
+window.getStoredPatientFirstName = getStoredPatientFirstName;
+
+document.addEventListener('DOMContentLoaded', applyPatientNameLabels);
+
 // Mobile menu functionality
 document.addEventListener('DOMContentLoaded', function() {
     // Add mobile menu toggle button
