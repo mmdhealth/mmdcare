@@ -14,6 +14,12 @@ import { put, head, del } from "@vercel/blob";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+const hasBlobAccess = Boolean(
+  process.env.BLOB_READ_WRITE_TOKEN ||
+  process.env.BLOB_API_URL ||
+  process.env.VERCEL
+);
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -49,7 +55,7 @@ app.post("/api/logout", async (req, res) => {
     if (transfer.files && transfer.files.length > 0) {
       for (const file of transfer.files) {
         // Delete from blob storage if blobKey exists
-        if (file.blobKey) {
+        if (hasBlobAccess && file.blobKey) {
           console.log(`Deleting blob file: ${file.blobKey}`);
           deletePromises.push(
             del(file.blobKey).catch(err => {
@@ -60,7 +66,7 @@ app.post("/api/logout", async (req, res) => {
         
         // Also try to delete using the standard blob key pattern
         const standardBlobKey = `files/${transferId}/${file.name}`;
-        if (standardBlobKey !== file.blobKey) {
+        if (hasBlobAccess && standardBlobKey !== file.blobKey) {
           console.log(`Deleting blob file (standard pattern): ${standardBlobKey}`);
           deletePromises.push(
             del(standardBlobKey).catch(err => {
@@ -88,15 +94,17 @@ app.post("/api/logout", async (req, res) => {
     }
     
     // Delete transfer metadata from blob storage
-    const transferMetadataKey = `transfers/${transferId}.json`;
-    console.log(`Deleting transfer metadata blob: ${transferMetadataKey}`);
-    deletePromises.push(
-      del(transferMetadataKey).catch(err => {
-        if (err.message && !err.message.includes('not found')) {
-          console.error(`Failed to delete transfer metadata ${transferMetadataKey}:`, err);
-        }
-      })
-    );
+    if (hasBlobAccess) {
+      const transferMetadataKey = `transfers/${transferId}.json`;
+      console.log(`Deleting transfer metadata blob: ${transferMetadataKey}`);
+      deletePromises.push(
+        del(transferMetadataKey).catch(err => {
+          if (err.message && !err.message.includes('not found')) {
+            console.error(`Failed to delete transfer metadata ${transferMetadataKey}:`, err);
+          }
+        })
+      );
+    }
     
     // Delete the entire transfer directory from local disk
     const uploadDir = path.join(uploadsRoot, transferId);
@@ -118,15 +126,17 @@ app.post("/api/logout", async (req, res) => {
       
       // Try to delete all possible blob files for this transfer
       // We'll delete the transfer metadata and try to delete files with common patterns
-      const transferMetadataKey = `transfers/${transferId}.json`;
-      console.log(`Deleting transfer metadata blob: ${transferMetadataKey}`);
-      deletePromises.push(
-        del(transferMetadataKey).catch(err => {
-          if (err.message && !err.message.includes('not found')) {
-            console.error(`Failed to delete transfer metadata ${transferMetadataKey}:`, err);
-          }
-        })
-      );
+      if (hasBlobAccess) {
+        const transferMetadataKey = `transfers/${transferId}.json`;
+        console.log(`Deleting transfer metadata blob: ${transferMetadataKey}`);
+        deletePromises.push(
+          del(transferMetadataKey).catch(err => {
+            if (err.message && !err.message.includes('not found')) {
+              console.error(`Failed to delete transfer metadata ${transferMetadataKey}:`, err);
+            }
+          })
+        );
+      }
       
       // Delete transfer directory from local disk
       const uploadDir = path.join(uploadsRoot, transferId);
@@ -448,29 +458,27 @@ app.post("/api/upload", upload.single("file"), (req, res) => {
     };
 
     try {
-      // Read the file saved by multer and upload to Vercel Blob
       const localFilePath = path.join(uploadsRoot, transferId, req.file.originalname);
-      const fileBuffer = fs.readFileSync(localFilePath);
-      const blobKey = `files/${transferId}/${req.file.originalname}`;
+      if (hasBlobAccess) {
+        const fileBuffer = fs.readFileSync(localFilePath);
+        const blobKey = `files/${transferId}/${req.file.originalname}`;
 
-      const result = await put(blobKey, fileBuffer, {
-        contentType: req.file.mimetype,
-        access: "public",
-        allowOverwrite: true
-      });
+        const result = await put(blobKey, fileBuffer, {
+          contentType: req.file.mimetype,
+          access: "public",
+          allowOverwrite: true
+        });
 
-      // Attach blob info to metadata
-      meta.url = result.url;
-      meta.blobKey = blobKey;
+        meta.url = result.url;
+        meta.blobKey = blobKey;
 
-      // Only remove local file in production (keep for local development)
-      if (process.env.NODE_ENV === 'production') {
-        try { fs.unlinkSync(localFilePath); } catch (_) {}
+        if (process.env.NODE_ENV === 'production') {
+          try { fs.unlinkSync(localFilePath); } catch (_) {}
+        }
+      } else {
+        console.log('Skipping blob upload (no credentials) - keeping local file only');
       }
     } catch (e) {
-      // If blob upload fails, keep local file; still record meta without url
-      // This allows the desktop to continue functioning locally.
-      // You can inspect logs and retry manually if needed.
       console.error("Blob upload failed:", e);
     }
 
@@ -507,29 +515,27 @@ app.post("/upload/:transferId", upload.single("file"), (req, res) => {
     };
 
     try {
-      // Read the file saved by multer and upload to Vercel Blob
       const localFilePath = path.join(uploadsRoot, transferId, req.file.originalname);
-      const fileBuffer = fs.readFileSync(localFilePath);
-      const blobKey = `files/${transferId}/${req.file.originalname}`;
+      if (hasBlobAccess) {
+        const fileBuffer = fs.readFileSync(localFilePath);
+        const blobKey = `files/${transferId}/${req.file.originalname}`;
 
-      const result = await put(blobKey, fileBuffer, {
-        contentType: req.file.mimetype,
-        access: "public",
-        allowOverwrite: true
-      });
+        const result = await put(blobKey, fileBuffer, {
+          contentType: req.file.mimetype,
+          access: "public",
+          allowOverwrite: true
+        });
 
-      // Attach blob info to metadata
-      meta.url = result.url;
-      meta.blobKey = blobKey;
+        meta.url = result.url;
+        meta.blobKey = blobKey;
 
-      // Only remove local file in production (keep for local development)
-      if (process.env.NODE_ENV === 'production') {
-        try { fs.unlinkSync(localFilePath); } catch (_) {}
+        if (process.env.NODE_ENV === 'production') {
+          try { fs.unlinkSync(localFilePath); } catch (_) {}
+        }
+      } else {
+        console.log('Skipping blob upload (no credentials) - keeping local file only');
       }
     } catch (e) {
-      // If blob upload fails, keep local file; still record meta without url
-      // This allows the desktop to continue functioning locally.
-      // You can inspect logs and retry manually if needed.
       console.error("Blob upload failed:", e);
     }
 
