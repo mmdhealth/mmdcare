@@ -19,6 +19,17 @@ const hasBlobAccess = Boolean(
   process.env.BLOB_API_URL ||
   process.env.VERCEL
 );
+const deleteLocalTransferFiles = (transferId) => {
+  const dir = path.join(__dirname, "uploads", transferId);
+  try {
+    if (fs.existsSync(dir)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+      console.log(`Deleted local transfer directory: ${dir}`);
+    }
+  } catch (err) {
+    console.error(`Failed to delete local transfer directory ${dir}:`, err);
+  }
+};
 
 app.use(cors());
 app.use(express.json());
@@ -107,15 +118,7 @@ app.post("/api/logout", async (req, res) => {
     }
     
     // Delete the entire transfer directory from local disk
-    const uploadDir = path.join(uploadsRoot, transferId);
-    try {
-      if (fs.existsSync(uploadDir)) {
-        fs.rmSync(uploadDir, { recursive: true, force: true });
-        console.log(`Deleted transfer directory: ${uploadDir}`);
-      }
-    } catch (err) {
-      console.error(`Failed to delete transfer directory ${uploadDir}:`, err);
-    }
+    deleteLocalTransferFiles(transferId);
   }
   
   // Also collect transferIds from patientTransfers map (in case they're not in transfers map)
@@ -139,15 +142,7 @@ app.post("/api/logout", async (req, res) => {
       }
       
       // Delete transfer directory from local disk
-      const uploadDir = path.join(uploadsRoot, transferId);
-      try {
-        if (fs.existsSync(uploadDir)) {
-          fs.rmSync(uploadDir, { recursive: true, force: true });
-          console.log(`Deleted transfer directory: ${uploadDir}`);
-        }
-      } catch (err) {
-        console.error(`Failed to delete transfer directory ${uploadDir}:`, err);
-      }
+      deleteLocalTransferFiles(transferId);
     }
   }
   
@@ -285,6 +280,24 @@ app.post("/api/transfers", (req, res) => {
       console.log('Deleting old transfer and files for patient:', patientId, oldTransferId);
       const oldTransfer = transfers.get(oldTransferId);
       if (oldTransfer) {
+        if (hasBlobAccess && Array.isArray(oldTransfer.files)) {
+          oldTransfer.files.forEach(file => {
+            if (file?.blobKey) {
+              del(file.blobKey).catch(err => {
+                console.error(`Failed to delete blob ${file.blobKey}:`, err);
+              });
+            }
+          });
+        }
+        if (hasBlobAccess) {
+          const metadataKey = `transfers/${oldTransferId}.json`;
+          del(metadataKey).catch(err => {
+            if (err.message && !err.message.includes('not found')) {
+              console.error(`Failed to delete transfer metadata ${metadataKey}:`, err);
+            }
+          });
+        }
+        deleteLocalTransferFiles(oldTransferId);
         // Delete all files from old transfer
         oldTransfer.files = [];
       }
@@ -1243,10 +1256,7 @@ app.delete("/delete-all/:transferId", (req, res) => {
     t.files = [];
     
     // Delete files from disk
-    const uploadDir = path.join(uploadsRoot, transferId);
-    if (fs.existsSync(uploadDir)) {
-      fs.rmSync(uploadDir, { recursive: true, force: true });
-    }
+    deleteLocalTransferFiles(transferId);
     
     // Broadcast deletion event
     broadcast(transferId, { type: "files_deleted" });

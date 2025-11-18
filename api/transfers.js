@@ -1,5 +1,5 @@
 // Local API endpoint for creating new transfers
-import { loadTransferFromBlob, saveTransferToBlob, createEmptyTransfer } from './blobStore.js';
+import { loadTransferFromBlob, saveTransferToBlob, createEmptyTransfer, deleteTransferFromBlob, deletePatientTransferMapping } from './blobStore.js';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -83,8 +83,11 @@ export default async function handler(req, res) {
       }
       
       if (existingTransferId) {
-        console.log('Reusing existing transfer ID for patient:', patientId, existingTransferId);
-        return res.status(200).json({ transferId: existingTransferId, patientId, reused: true });
+        console.log('Deleting existing transfer before creating new one for patient:', patientId, existingTransferId);
+        global.__mmd_transfers.delete(existingTransferId);
+        global.__patient_transfers.delete(patientId);
+        await deleteTransferFromBlob(existingTransferId);
+        await deletePatientTransferMapping(patientId);
       }
     }
     
