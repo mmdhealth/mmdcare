@@ -134,67 +134,8 @@
             showLogoutOverlay();
         }
 
-        // Function to clear dashboard the EXACT SAME way as logout
-        // But preserve currentTransferId if it exists (from redirect after upload)
-        function clearDashboardLikeLogout() {
-            console.log('Clearing dashboard - EXACT SAME PROCESS AS LOGOUT');
-            
-            // Preserve currentTransferId if it exists (from redirect)
-            const savedTransferId = localStorage.getItem('currentTransferId');
-            const savedPatientName = localStorage.getItem('currentPatientName');
-            
-            // STEP 1: Clear UI immediately - remove ALL files (PDF and Excel) - EXACT SAME AS LOGOUT
-            uploadedFiles = [];
-            currentTransferId = null;
-            
-            const categoriesContainer = document.getElementById('file-categories');
-            if (categoriesContainer) {
-                categoriesContainer.innerHTML = '<p class="empty-category">Inga filer att visa</p>';
-            }
-            
-            const journalContent = document.querySelector('.journal-content');
-            if (journalContent) {
-                journalContent.innerHTML = '';
-            }
-            
-            updateFileDisplay();
-            clearAllFiles();
-            
-            // STEP 2: Clear ALL localStorage - EXACT SAME AS LOGOUT (same keys, same order)
-            const allKeys = Object.keys(localStorage);
-            allKeys.forEach(key => {
-                // Clear EXACTLY what logout clears
-                if (key.startsWith('mmd_files_') || 
-                    key.startsWith('transfer_') ||  // This includes transfer_patient_ and transfer_created_
-                    key.startsWith('patient_transfer_') ||
-                    key === 'currentTransferId' ||
-                    key === 'uploadedFiles') {
-                    localStorage.removeItem(key);
-                    console.log('Cleared (same as logout):', key);
-                }
-            });
-            
-            // Restore currentTransferId and currentPatientName if they were saved (from redirect)
-            if (savedTransferId) {
-                localStorage.setItem('currentTransferId', savedTransferId);
-                console.log('Preserved currentTransferId for new files:', savedTransferId);
-            }
-            if (savedPatientName) {
-                localStorage.setItem('currentPatientName', savedPatientName);
-            }
-            
-            console.log('✅ Dashboard cleared EXACTLY like logout');
-        }
-
         // Trigger dashboard page animations
         document.addEventListener('DOMContentLoaded', async function() {
-            // CRITICAL: Use the SAME clearing process as logout FIRST
-            console.log('Dashboard loaded - Clearing ALL files (same as logout)');
-            clearDashboardLikeLogout();
-            
-            // Wait a moment to ensure clearing completes
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
             // CRITICAL: Store session start time ONLY if this is a new session (not a redirect from upload)
             // If we're being redirected from index.html after upload, sessionStartTime should already exist
             // If it doesn't exist, this is a new session after logout - set it now
@@ -237,7 +178,6 @@
         async function initializeFileUpload() {
             console.log('Dashboard initializeFileUpload - Starting with loading state');
             
-            // STEP 1: Show loading state while clearing old data
             const categoriesContainer = document.getElementById('file-categories');
             const journalContent = document.querySelector('.journal-content');
             
@@ -247,31 +187,6 @@
             if (journalContent) {
                 journalContent.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 20px;">Laddar...</p>';
             }
-            
-            // STEP 2: Clear ALL old data in background (wait a bit to ensure clearing completes)
-            uploadedFiles = [];
-            currentTransferId = null;
-            
-            // Clear ALL localStorage file data
-            Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('mmd_files_') || 
-                    key === 'uploadedFiles') {
-                    localStorage.removeItem(key);
-                    console.log('Cleared old files:', key);
-                }
-            });
-            
-            // Wait a moment to ensure clearing is complete
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // STEP 3: Clear display completely
-            if (categoriesContainer) {
-                categoriesContainer.innerHTML = '<p class="empty-category">Inga filer att visa</p>';
-            }
-            if (journalContent) {
-                journalContent.innerHTML = '';
-            }
-            updateFileDisplay();
             
             // Update patient name from localStorage
             const savedPatientName = localStorage.getItem('currentPatientName');
