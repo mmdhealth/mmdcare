@@ -1,23 +1,22 @@
-# MMDConnect Mobile Upload Platform
+# MMDConnect Care Provider (QR-less)
 
-A secure mobile file upload system for healthcare documents, allowing patients to easily share PDF and Excel files with healthcare providers through QR code scanning.
+A streamlined care-provider portal that lets clinicians authenticate with BankID (or a built‑in test login), select a patient from a curated list, and monitor real‑time uploads sent from the companion mobile experience. The current build removes the QR-only workflow and always starts with the login + patient selector UI.
 
 ## 🚀 Features
 
-- **QR Code Upload**: Scan QR code with mobile device to access upload page
-- **Secure File Transfer**: Real-time file transfer with progress monitoring
-- **Multiple File Types**: Support for PDF and Excel (XLSX) files
-- **Real-time Updates**: Server-sent events for live upload status
-- **Mobile-Optimized**: Responsive design for mobile devices
-- **Healthcare Focus**: Designed specifically for medical document sharing
+- **BankID & Test Login**: Dual login options so the platform is accessible during demos.
+- **Patient Selector**: Pick Anders, Markus, or Samuel and automatically provision a clean transfer channel.
+- **Secure File Transfer**: Real-time status plus automatic cleanup of legacy uploads per patient.
+- **Multiple File Types**: PDF and Excel (XLSX) ingestion with structured parsing.
+- **Healthcare Dashboard**: Organ overview, lab summaries, GPT helper, and more.
 
-## 📱 How It Works
+## 📱 How It Works (Current Flow)
 
-1. **Desktop/Provider**: Opens the main page which generates a unique QR code
-2. **Mobile/Patient**: Scans QR code to access the upload page
-3. **Upload**: Patient selects and uploads health documents
-4. **Real-time Sync**: Desktop receives files instantly with live updates
-5. **Dashboard**: Files are processed and displayed in the healthcare dashboard
+1. **Login**: Provider visits `login.html`, chooses BankID or the “Testa inloggning” button.
+2. **Patient Selection**: After auth the user lands on `index.html`, selects a patient, and the app creates a brand-new transfer session.
+3. **Waiting State**: A notification indicates “Väntar på uppladdning <patient>” while `/api/complete` is polled.
+4. **Upload Detection**: Once files arrive, the dashboard opens, clears stale data, and displays the latest PDFs/XLSX contents.
+5. **Dashboard**: Providers review journal entries, labs, GPT summaries, and linked organ modules.
 
 ## 🛠️ Technology Stack
 
@@ -26,7 +25,6 @@ A secure mobile file upload system for healthcare documents, allowing patients t
 - **File Upload**: Formidable for handling multipart/form-data
 - **Storage**: Vercel Blob for file storage
 - **Real-time**: Server-Sent Events (SSE) and polling
-- **QR Codes**: QuickChart.io API
 - **PDF Processing**: pdf-parse for document analysis
 - **Excel Processing**: xlsx (SheetJS) for spreadsheet parsing
 - **Charts**: Chart.js for data visualization
@@ -62,8 +60,8 @@ The app will be available at: `https://your-project-name.netlify.app`
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/oldmarkdesigns/mmdcaremobile.git
-   cd mmdcaremobile
+   git clone https://github.com/mmdhealth/mmdcare.git
+   cd mmdcare
    ```
 
 2. **Install dependencies**:
@@ -73,12 +71,12 @@ The app will be available at: `https://your-project-name.netlify.app`
 
 3. **Start the development server**:
    ```bash
-   npm start
+   npm run dev
    ```
 
 4. **Access the application**:
-   - Main page: `http://localhost:3000`
-   - Test page: `http://localhost:3000/receive`
+   - Login page: `http://localhost:3000/login.html`
+   - Patient list: `http://localhost:3000/index.html`
 
 ## 📁 Project Structure
 
@@ -88,8 +86,9 @@ mmdcaremobile/
 ├── netlify/               # Netlify deployment configuration
 │   └── functions/         # Serverless functions
 ├── uploads/               # Uploaded files (excluded from git)
-├── index.html            # Main login/QR page
-├── dashboard.html        # Healthcare provider dashboard
+├── login.html           # BankID + test login entry point
+├── index.html           # Patient selector + transfer creation
+├── dashboard.html       # Healthcare provider dashboard
 ├── transfer-server.js    # Main Node.js server
 ├── package.json          # Dependencies and scripts
 ├── vercel.json          # Vercel deployment config
@@ -151,9 +150,9 @@ For detailed information on Excel file format requirements, see [EXCEL_FORMAT_GU
 
 ### Common Issues
 
-1. **QR code not working**: Ensure the server is running and accessible
-2. **File upload fails**: Check file size and format (PDF/XLSX only)
-3. **Connection issues**: Verify network connectivity and server status
+1. **Still seeing the QR UI**: Clear browser cache + localStorage (`localStorage.clear()` in DevTools) to force the new login flow.
+2. **File upload fails**: Check file size and format (PDF/XLSX only).
+3. **Connection issues**: Verify network connectivity and server status.
 
 ### Development Issues
 
