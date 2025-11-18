@@ -7,8 +7,10 @@ import multer from "multer";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { networkInterfaces } from "os";
 import pdfParse from "pdf-parse";
-import { put, head } from "@vercel/blob";
+import * as XLSX from "xlsx";
+import { put, head, del } from "@vercel/blob";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -16,12 +18,154 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files from the project root
-app.use(express.static(__dirname));
+// Serve static files from the public directory
+const publicDir = path.join(__dirname, "public");
+app.use(express.static(publicDir));
+
+// Serve login.html at root (first page)
+app.get("/", (req, res) => {
+  res.sendFile(path.join(publicDir, "login.html"));
+});
 
 // Ephemeral state for demo
 const transfers = new Map(); // transferId -> { status, files: [] }
 const clients = new Map();   // transferId -> Set(res) for SSE
+const patientTransfers = new Map(); // patientId -> transferId
+
+// API endpoint to clear all transfers (called on logout)
+app.post("/api/logout", async (req, res) => {
+  console.log('Logout requested - clearing all transfers and deleting all files');
+  
+  // Delete all files from all transfers before clearing
+  const deletePromises = [];
+  const allTransferIds = new Set();
+  
+  // Collect all transferIds from transfers map
+  for (const [transferId, transfer] of transfers.entries()) {
+    allTransferIds.add(transferId);
+    console.log(`Deleting files for transfer: ${transferId}`);
+    
+    // Delete all files from this transfer
+    if (transfer.files && transfer.files.length > 0) {
+      for (const file of transfer.files) {
+        // Delete from blob storage if blobKey exists
+        if (file.blobKey) {
+          console.log(`Deleting blob file: ${file.blobKey}`);
+          deletePromises.push(
+            del(file.blobKey).catch(err => {
+              console.error(`Failed to delete blob ${file.blobKey}:`, err);
+            })
+          );
+        }
+        
+        // Also try to delete using the standard blob key pattern
+        const standardBlobKey = `files/${transferId}/${file.name}`;
+        if (standardBlobKey !== file.blobKey) {
+          console.log(`Deleting blob file (standard pattern): ${standardBlobKey}`);
+          deletePromises.push(
+            del(standardBlobKey).catch(err => {
+              // Ignore errors for files that don't exist
+              if (err.message && !err.message.includes('not found')) {
+                console.error(`Failed to delete blob ${standardBlobKey}:`, err);
+              }
+            })
+          );
+        }
+        
+        // Delete from local disk
+        if (file.name) {
+          const localFilePath = path.join(uploadsRoot, transferId, file.name);
+          try {
+            if (fs.existsSync(localFilePath)) {
+              fs.unlinkSync(localFilePath);
+              console.log(`Deleted local file: ${localFilePath}`);
+            }
+          } catch (err) {
+            console.error(`Failed to delete local file ${localFilePath}:`, err);
+          }
+        }
+      }
+    }
+    
+    // Delete transfer metadata from blob storage
+    const transferMetadataKey = `transfers/${transferId}.json`;
+    console.log(`Deleting transfer metadata blob: ${transferMetadataKey}`);
+    deletePromises.push(
+      del(transferMetadataKey).catch(err => {
+        if (err.message && !err.message.includes('not found')) {
+          console.error(`Failed to delete transfer metadata ${transferMetadataKey}:`, err);
+        }
+      })
+    );
+    
+    // Delete the entire transfer directory from local disk
+    const uploadDir = path.join(uploadsRoot, transferId);
+    try {
+      if (fs.existsSync(uploadDir)) {
+        fs.rmSync(uploadDir, { recursive: true, force: true });
+        console.log(`Deleted transfer directory: ${uploadDir}`);
+      }
+    } catch (err) {
+      console.error(`Failed to delete transfer directory ${uploadDir}:`, err);
+    }
+  }
+  
+  // Also collect transferIds from patientTransfers map (in case they're not in transfers map)
+  for (const [patientId, transferId] of patientTransfers.entries()) {
+    if (!allTransferIds.has(transferId)) {
+      allTransferIds.add(transferId);
+      console.log(`Found additional transfer ID from patient mapping: ${transferId}`);
+      
+      // Try to delete all possible blob files for this transfer
+      // We'll delete the transfer metadata and try to delete files with common patterns
+      const transferMetadataKey = `transfers/${transferId}.json`;
+      console.log(`Deleting transfer metadata blob: ${transferMetadataKey}`);
+      deletePromises.push(
+        del(transferMetadataKey).catch(err => {
+          if (err.message && !err.message.includes('not found')) {
+            console.error(`Failed to delete transfer metadata ${transferMetadataKey}:`, err);
+          }
+        })
+      );
+      
+      // Delete transfer directory from local disk
+      const uploadDir = path.join(uploadsRoot, transferId);
+      try {
+        if (fs.existsSync(uploadDir)) {
+          fs.rmSync(uploadDir, { recursive: true, force: true });
+          console.log(`Deleted transfer directory: ${uploadDir}`);
+        }
+      } catch (err) {
+        console.error(`Failed to delete transfer directory ${uploadDir}:`, err);
+      }
+    }
+  }
+  
+  // Wait for all blob deletions to complete
+  await Promise.all(deletePromises);
+  console.log('All blob files and metadata deleted');
+  
+  // Clear all transfers from memory
+  transfers.clear();
+  
+  // Clear all patient-to-transfer mappings
+  patientTransfers.clear();
+  
+  // Close all SSE connections
+  clients.forEach((clientSet, transferId) => {
+    clientSet.forEach(res => {
+      try {
+        res.end();
+      } catch (e) {
+        // Ignore errors
+      }
+    });
+  });
+  clients.clear();
+  
+  console.log('All transfers, mappings, files, and blob storage completely deleted');
+  res.status(200).json({ success: true, message: 'All transfers and files deleted' });
+});
 
 // Storage (local disk for pilot)
 const uploadsRoot = path.join(__dirname, "uploads");
@@ -29,7 +173,12 @@ fs.mkdirSync(uploadsRoot, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(uploadsRoot, req.params.transferId);
+    // Support both route params and query params
+    const transferId = req.params.transferId || req.query.transferId;
+    if (!transferId) {
+      return cb(new Error("transferId required"));
+    }
+    const dir = path.join(uploadsRoot, transferId);
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -53,6 +202,115 @@ app.post("/transfers", (req, res) => {
   const id = uuid();
   transfers.set(id, { status: "open", files: [], createdAt: Date.now() });
   res.status(201).json({ transferId: id, expiresInSec: 900 });
+});
+
+// API route alias for /api/transfers (for HTML compatibility)
+app.get("/api/transfers", (req, res) => {
+  const { patientId } = req.query;
+  
+  if (patientId) {
+    // Check if a transfer already exists for this patient
+    const existingTransferId = patientTransfers.get(patientId);
+    
+    if (existingTransferId) {
+      // Return the existing transfer ID
+      const existingTransfer = transfers.get(existingTransferId);
+      if (existingTransfer) {
+        console.log('Returning existing transfer ID for patient (GET):', patientId, existingTransferId);
+        return res.status(200).json({ 
+          transferId: existingTransferId, 
+          patientId, 
+          sessionId: existingTransfer.sessionId,
+          existing: true
+        });
+      } else {
+        // Transfer was deleted, create a new one
+        console.log('Existing transfer ID found but transfer deleted, creating new one');
+      }
+    }
+    
+    // No existing transfer, create a new one
+    const newId = uuid();
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Create new transfer with session ID
+    transfers.set(newId, { 
+      status: "open", 
+      files: [], 
+      createdAt: Date.now(), 
+      patientId: patientId,
+      sessionId: sessionId
+    });
+    patientTransfers.set(patientId, newId);
+    console.log('Created NEW transfer ID for patient (GET):', patientId, newId, 'Session:', sessionId);
+    return res.status(200).json({ transferId: newId, patientId, sessionId, existing: false });
+  } else {
+    return res.status(400).json({ error: 'patientId parameter required' });
+  }
+});
+
+app.post("/api/transfers", (req, res) => {
+  const { patientId } = req.body || {};
+  
+  // ALWAYS create a NEW transfer - NEVER reuse old ones
+  // This ensures complete data isolation between sessions
+  const id = uuid();
+  const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Create transfer with session ID to ensure it's unique
+  transfers.set(id, { 
+    status: "open", 
+    files: [], 
+    createdAt: Date.now(), 
+    patientId: patientId || null,
+    sessionId: sessionId
+  });
+  
+  // If patientId provided, ALWAYS update the mapping (even if it existed)
+  if (patientId) {
+    // CRITICAL: Delete any old transfer for this patient first
+    // This ensures old files (PDF and Excel) are completely removed
+    const oldTransferId = patientTransfers.get(patientId);
+    if (oldTransferId && oldTransferId !== id) {
+      console.log('Deleting old transfer and files for patient:', patientId, oldTransferId);
+      const oldTransfer = transfers.get(oldTransferId);
+      if (oldTransfer) {
+        // Delete all files from old transfer
+        oldTransfer.files = [];
+      }
+      // Delete the old transfer completely
+      transfers.delete(oldTransferId);
+      console.log('Removed old transfer mapping for patient:', patientId, oldTransferId);
+    }
+    patientTransfers.set(patientId, id);
+    console.log('Created NEW transfer ID for patient:', patientId, id, 'Session:', sessionId);
+  }
+  
+  res.status(201).json({ transferId: id, expiresInSec: 900, patientId, sessionId });
+});
+
+// Get local network IP for mobile access
+function getLocalIP() {
+  const interfaces = networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return null;
+}
+
+// API endpoint to get server info (for local development)
+app.get("/api/server-info", (req, res) => {
+  const localIP = getLocalIP();
+  const port = process.env.PORT || 8000;
+  res.json({
+    localIP: localIP,
+    port: port,
+    baseUrl: localIP ? `http://${localIP}:${port}` : null
+  });
 });
 
 // 2) Mobile upload page (QR opens this)
@@ -79,7 +337,9 @@ app.get("/upload", (req, res) => {
   res.type("html").send(`<!doctype html>
   <html><head>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta charset="utf-8" /><title>Share to MMDConnect</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"/>
+    <title>Share to MMDConnect</title>
     <style>
       body{font-family:system-ui;padding:16px;background:#f9fafb;min-height:100vh}
       .card{border:1px solid #e5e7eb;border-radius:16px;padding:24px;background:white;max-width:400px;margin:2rem auto}
@@ -150,11 +410,33 @@ app.get("/upload", (req, res) => {
   </body></html>`);
 });
 
-// 3) Receive file (mobile → server)
-app.post("/upload/:transferId", upload.single("file"), (req, res) => {
-  const { transferId } = req.params;
-  const t = transfers.get(transferId);
-  if (!t || t.status !== "open") return res.status(410).send("Transfer expired or invalid");
+// API route for upload with query parameter (for mobile-upload.html compatibility)
+app.post("/api/upload", upload.single("file"), (req, res) => {
+  const { transferId } = req.query;
+  if (!transferId) return res.status(400).send("transferId required");
+  
+  let t = transfers.get(transferId);
+  
+  // If transfer doesn't exist, try to create it (might have been lost on server restart)
+  if (!t) {
+    console.log('Transfer not found in Map, creating new one for:', transferId);
+    t = { status: "open", files: [], createdAt: Date.now() };
+    transfers.set(transferId, t);
+  }
+  
+  // If transfer is closed, reopen it to allow multiple uploads
+  if (t.status === "closed") {
+    console.log('Transfer was closed, reopening for new upload:', transferId);
+    t.status = "open";
+    // Keep existing files, just reopen the transfer
+  }
+  
+  if (t.status !== "open") {
+    console.log('Transfer status is not open:', transferId, 'Status:', t.status);
+    return res.status(410).send("Transfer expired or invalid");
+  }
+
+  console.log('Processing upload for transfer:', transferId, 'Current files:', t.files.length);
 
   (async () => {
     // Prepare metadata
@@ -181,8 +463,69 @@ app.post("/upload/:transferId", upload.single("file"), (req, res) => {
       meta.url = result.url;
       meta.blobKey = blobKey;
 
-      // Optional: remove local file to save disk space
-      try { fs.unlinkSync(localFilePath); } catch (_) {}
+      // Only remove local file in production (keep for local development)
+      if (process.env.NODE_ENV === 'production') {
+        try { fs.unlinkSync(localFilePath); } catch (_) {}
+      }
+    } catch (e) {
+      // If blob upload fails, keep local file; still record meta without url
+      // This allows the desktop to continue functioning locally.
+      // You can inspect logs and retry manually if needed.
+      console.error("Blob upload failed:", e);
+    }
+
+    t.files.push(meta);
+    console.log('File added to transfer:', transferId, 'File:', meta.name, 'Total files:', t.files.length);
+    console.log('Transfer status after upload:', t.status, 'Files count:', t.files.length);
+    broadcast(transferId, { type: "file", file: meta });
+    res.sendStatus(204);
+  })();
+});
+
+// 3) Receive file (mobile → server)
+app.post("/upload/:transferId", upload.single("file"), (req, res) => {
+  const { transferId } = req.params;
+  let t = transfers.get(transferId);
+  if (!t) return res.status(410).send("Transfer expired or invalid");
+  
+  // If transfer is closed, reopen it to allow multiple uploads
+  if (t.status === "closed") {
+    console.log('Transfer was closed, reopening for new upload:', transferId);
+    t.status = "open";
+    // Keep existing files, just reopen the transfer
+  }
+  
+  if (t.status !== "open") return res.status(410).send("Transfer expired or invalid");
+
+  (async () => {
+    // Prepare metadata
+    const meta = {
+      name: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+      uploadedAt: new Date().toISOString()
+    };
+
+    try {
+      // Read the file saved by multer and upload to Vercel Blob
+      const localFilePath = path.join(uploadsRoot, transferId, req.file.originalname);
+      const fileBuffer = fs.readFileSync(localFilePath);
+      const blobKey = `files/${transferId}/${req.file.originalname}`;
+
+      const result = await put(blobKey, fileBuffer, {
+        contentType: req.file.mimetype,
+        access: "public",
+        allowOverwrite: true
+      });
+
+      // Attach blob info to metadata
+      meta.url = result.url;
+      meta.blobKey = blobKey;
+
+      // Only remove local file in production (keep for local development)
+      if (process.env.NODE_ENV === 'production') {
+        try { fs.unlinkSync(localFilePath); } catch (_) {}
+      }
     } catch (e) {
       // If blob upload fails, keep local file; still record meta without url
       // This allows the desktop to continue functioning locally.
@@ -243,6 +586,83 @@ app.get("/transfer/:transferId", (req, res) => {
     status: t.status,
     files: t.files
   });
+});
+
+// API route for getting files (GET /api/files?transferId=...) - for dashboard
+app.get("/api/files", (req, res) => {
+  const { transferId } = req.query;
+  if (!transferId) return res.status(400).json({ error: "transferId required" });
+  
+  const t = transfers.get(transferId);
+  if (!t) {
+    console.log('Transfer not found for ID (cleared or expired):', transferId);
+    // Return empty files - NEVER load from blob storage or any persistent storage
+    // This ensures old data is never returned after logout
+    return res.json({
+      transferId,
+      status: "open",
+      files: [],
+      completed: false
+    });
+  }
+  
+  // Only return files if transfer exists in current session memory
+  // NEVER fall back to blob storage or any persistent storage
+  res.json({
+    transferId,
+    status: t.status,
+    files: t.files || [], // Ensure files array exists
+    completed: t.status === "closed"
+  });
+});
+
+// API route for checking completion status (GET /api/complete?transferId=...)
+app.get("/api/complete", (req, res) => {
+  const { transferId } = req.query;
+  if (!transferId) return res.status(400).json({ error: "transferId required" });
+  
+  let t = transfers.get(transferId);
+  
+  // If transfer doesn't exist, return open status (might be created on upload)
+  if (!t) {
+    console.log('Transfer not found when checking status, returning open:', transferId);
+    return res.json({
+      transferId,
+      status: "open",
+      files: [],
+      completed: false
+    });
+  }
+  
+  console.log('Checking transfer status:', transferId, 'Status:', t.status, 'Files:', t.files.length);
+  res.json({
+    transferId,
+    status: t.status,
+    files: t.files,
+    completed: t.status === "closed"
+  });
+});
+
+// API route for marking completion (POST /api/complete?transferId=...) - for mobile-upload.html
+app.post("/api/complete", (req, res) => {
+  const { transferId } = req.query;
+  if (!transferId) return res.status(400).json({ error: "transferId required" });
+  
+  let t = transfers.get(transferId);
+  
+  // If transfer doesn't exist, create it (might have been lost on server restart)
+  if (!t) {
+    console.log('Transfer not found in Map when marking complete, creating new one for:', transferId);
+    t = { status: "open", files: [], createdAt: Date.now() };
+    transfers.set(transferId, t);
+  }
+  
+  console.log('Marking transfer as closed:', transferId, 'Files:', t.files.length);
+  t.status = "closed";
+  broadcast(transferId, { type: "status", status: "closed" });
+  broadcast(transferId, { type: "closed" });
+  endStream(transferId);
+  res.sendStatus(204);
 });
 
 // 7) Get PDF content for journal notes
@@ -542,6 +962,257 @@ function parsePDFContent(text, filename) {
   };
 }
 
+// 8) Get Excel content for parsing
+app.get("/api/excel-content", async (req, res) => {
+  const { transferId, filename } = req.query;
+  if (!transferId || !filename) {
+    return res.status(400).json({ error: "Missing transferId or filename" });
+  }
+
+  const t = transfers.get(transferId);
+  if (!t) return res.status(404).json({ error: "Transfer not found" });
+
+  try {
+    // Find the Excel file in the transfer
+    const excelFile = t.files.find(f => 
+      f.name === filename && 
+      (f.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+       f.mimetype === 'application/vnd.ms-excel' ||
+       f.name.toLowerCase().endsWith('.xlsx') ||
+       f.name.toLowerCase().endsWith('.xls'))
+    );
+
+    if (!excelFile) {
+      return res.status(404).json({ error: "Excel file not found in transfer" });
+    }
+
+    // Try to get file from local disk first, then from blob URL
+    let excelBuffer;
+    const localFilePath = path.join(uploadsRoot, transferId, filename);
+    
+    if (fs.existsSync(localFilePath)) {
+      excelBuffer = fs.readFileSync(localFilePath);
+    } else if (excelFile.url) {
+      // Download from blob URL
+      const response = await fetch(excelFile.url);
+      if (!response.ok) {
+        return res.status(500).json({ error: "Failed to download Excel file" });
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      excelBuffer = Buffer.from(arrayBuffer);
+    } else {
+      return res.status(404).json({ error: "Excel file not found in storage" });
+    }
+
+    // Parse the Excel content
+    let workbook;
+    let structuredContent;
+    try {
+      workbook = XLSX.read(excelBuffer, { type: 'buffer' });
+      structuredContent = parseExcelContent(excelFile, workbook);
+    } catch (parseError) {
+      console.error('Excel parsing failed:', parseError);
+      structuredContent = createFallbackExcelContent(excelFile);
+    }
+
+    res.json(structuredContent);
+  } catch (error) {
+    console.error('Error processing Excel content:', error);
+    res.status(500).json({ error: "Failed to process Excel content", details: error.message });
+  }
+});
+
+// Helper function to parse Excel content
+function parseExcelContent(excelFile, workbook) {
+  const filename = excelFile.name;
+  const uploadedAt = new Date(excelFile.uploadedAt || Date.now());
+
+  // Get the first sheet
+  const firstSheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[firstSheetName];
+
+  // Convert to JSON for easier parsing
+  const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+
+  // Extract heart-related data
+  const heartData = extractHeartData(jsonData);
+
+  // Create dynamic data mapping
+  const dynamicData = {};
+  const unwantedPatterns = [
+    'datum', 'date', 'tid', 'time', 'kl', 'klockan',
+    '<', '>', '≤', '≥', 'under', 'över', 'mindre', 'mer',
+    'normal', 'referens', 'ref', 'range', 'intervall',
+    'enhet', 'unit', 'värde', 'value', 'resultat', 'result',
+    'prov', 'sample', 'analys', 'analysis', 'test', 'mätning'
+  ];
+
+  const rawDataItems = jsonData.flat().filter(item => {
+    if (!item || typeof item !== 'string') return false;
+    const trimmed = item.trim().toLowerCase();
+    if (trimmed === '' || trimmed.length < 3) return false;
+    for (const pattern of unwantedPatterns) {
+      if (trimmed.includes(pattern)) return false;
+    }
+    if (/^[\d\s\.,\-<>≤≥]+$/.test(trimmed)) return false;
+    return true;
+  });
+
+  // Find values for each rawData item
+  rawDataItems.forEach(item => {
+    let foundValues = [];
+    for (let i = 0; i < jsonData.length; i++) {
+      const row = jsonData[i];
+      if (!row || row.length === 0) continue;
+      for (let j = 0; j < row.length; j++) {
+        const cell = String(row[j]).trim();
+        if (cell === item) {
+          // Look in same column below
+          for (let k = i + 1; k < jsonData.length; k++) {
+            const valueRow = jsonData[k];
+            if (valueRow && j < valueRow.length) {
+              const numValue = parseFloat(valueRow[j]);
+              if (!isNaN(numValue) && numValue > 0) {
+                foundValues.push({ value: numValue, row: k, col: j });
+              }
+            }
+          }
+          // Try next column
+          if (j + 1 < row.length) {
+            const nextColValue = parseFloat(row[j + 1]);
+            if (!isNaN(nextColValue) && nextColValue > 0) {
+              foundValues.push({ value: nextColValue, row: i, col: j + 1 });
+            }
+          }
+        }
+      }
+    }
+    if (foundValues.length > 0) {
+      const latestValue = foundValues.sort((a, b) => b.row - a.row)[0];
+      const existingValues = Object.values(dynamicData);
+      if (!existingValues.includes(latestValue.value)) {
+        dynamicData[item] = latestValue.value;
+      }
+    }
+  });
+
+  return {
+    filename: filename,
+    uploadedAt: uploadedAt.toISOString(),
+    sheetNames: workbook.SheetNames,
+    heartData: heartData,
+    rawData: rawDataItems,
+    dynamicData: dynamicData,
+    parsedAt: new Date().toISOString()
+  };
+}
+
+// Helper function to extract heart data from Excel
+function extractHeartData(jsonData) {
+  const heartData = {
+    heartRate: null,
+    systolicBP: null,
+    diastolicBP: null,
+    cholesterolLDL: null,
+    heartRateOverTime: [],
+    bloodPressureData: [],
+    ecgData: [],
+    hrvData: []
+  };
+
+  const patterns = {
+    heartRate: /(?:hjärtfrekvens|heart[\s-]*rate|puls|pulse|hr\b)/i,
+    systolic: /(?:systolisk|systolic|sys\b|övre[\s-]*blodtryck|upper[\s-]*bp)/i,
+    diastolic: /(?:diastolisk|diastolic|dia\b|nedre[\s-]*blodtryck|lower[\s-]*bp)/i,
+    cholesterol: /(?:kolesterol|cholesterol|ldl\b)/i
+  };
+
+  const findValueNearLabel = (row, colIndex, nextRow) => {
+    if (colIndex + 1 < row.length) {
+      const val = parseFloat(row[colIndex + 1]);
+      if (!isNaN(val)) return val;
+    }
+    if (nextRow && colIndex < nextRow.length) {
+      const val = parseFloat(nextRow[colIndex]);
+      if (!isNaN(val)) return val;
+    }
+    return null;
+  };
+
+  for (let i = 0; i < jsonData.length; i++) {
+    const row = jsonData[i];
+    const nextRow = i + 1 < jsonData.length ? jsonData[i + 1] : null;
+    if (!row || row.length === 0) continue;
+
+    for (let j = 0; j < row.length; j++) {
+      const cell = String(row[j]).trim();
+      if (!cell) continue;
+
+      if (patterns.heartRate.test(cell) && !heartData.heartRate) {
+        const value = findValueNearLabel(row, j, nextRow);
+        if (value !== null && value > 0 && value < 300) {
+          heartData.heartRate = Math.round(value);
+        }
+      }
+
+      if (patterns.systolic.test(cell) && !heartData.systolicBP) {
+        const value = findValueNearLabel(row, j, nextRow);
+        if (value !== null && value > 0 && value < 300) {
+          heartData.systolicBP = Math.round(value);
+        }
+      }
+
+      if (patterns.diastolic.test(cell) && !heartData.diastolicBP) {
+        const value = findValueNearLabel(row, j, nextRow);
+        if (value !== null && value > 0 && value < 200) {
+          heartData.diastolicBP = Math.round(value);
+        }
+      }
+
+      if (patterns.cholesterol.test(cell) && !heartData.cholesterolLDL) {
+        const value = findValueNearLabel(row, j, nextRow);
+        if (value !== null && value > 0 && value < 20) {
+          heartData.cholesterolLDL = value.toFixed(1);
+        }
+      }
+
+      // Handle blood pressure in "120/80" format
+      const bpMatch = cell.match(/(\d{2,3})\s*[\/\-]\s*(\d{2,3})/);
+      if (bpMatch && (!heartData.systolicBP || !heartData.diastolicBP)) {
+        const sys = parseInt(bpMatch[1]);
+        const dia = parseInt(bpMatch[2]);
+        if (sys > 60 && sys < 300 && dia > 40 && dia < 200) {
+          if (!heartData.systolicBP) heartData.systolicBP = sys;
+          if (!heartData.diastolicBP) heartData.diastolicBP = dia;
+        }
+      }
+    }
+  }
+
+  return heartData;
+}
+
+// Helper function for fallback Excel content
+function createFallbackExcelContent(excelFile) {
+  return {
+    filename: excelFile.name,
+    uploadedAt: new Date(excelFile.uploadedAt || Date.now()).toISOString(),
+    sheetNames: [],
+    heartData: {
+      heartRate: null,
+      systolicBP: null,
+      diastolicBP: null,
+      cholesterolLDL: null,
+      heartRateOverTime: [],
+      bloodPressureData: [],
+      ecgData: [],
+      hrvData: []
+    },
+    error: 'Excel file could not be parsed automatically',
+    parsedAt: new Date().toISOString()
+  };
+}
+
 // 7) Cancel transfer
 app.post("/cancel/:transferId", (req, res) => {
   const { transferId } = req.params;
@@ -581,6 +1252,11 @@ app.delete("/delete-all/:transferId", (req, res) => {
   }
 });
 
+// Favicon handler to prevent CSP errors
+app.get("/favicon.ico", (req, res) => {
+  res.status(204).end();
+});
+
 // 9) For quick local testing: a simple receive page with QR
 app.get("/receive", async (req, res) => {
   const id = uuid();
@@ -589,7 +1265,7 @@ app.get("/receive", async (req, res) => {
   const qrDataUrl = await QRCode.toDataURL(mobileUrl);
 
   res.type("html").send(`<!doctype html>
-  <html><head><meta charset="utf-8"/><title>Receive files - MMDConnect</title>
+  <html><head><meta charset="utf-8"/><meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"/><title>Receive files - MMDConnect</title>
   <style>
     body{font-family:system-ui;max-width:800px;margin:2rem auto;padding:20px;background:#f9fafb}
     .card{border:1px solid #e5e7eb;border-radius:16px;padding:24px;background:white;margin-bottom:20px}
@@ -708,3 +1384,4 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`Test page: http://localhost:${PORT}/receive`);
   }
 });
+

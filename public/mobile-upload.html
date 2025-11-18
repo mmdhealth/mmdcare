@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>MMDCare - Mobil uppladdning</title>
     <style>
         body {
@@ -32,6 +35,7 @@
             width: 40px;
             height: 40px;
             margin-bottom: 12px;
+            object-fit: contain;
             filter: brightness(0) saturate(100%) invert(8%) sepia(8%) saturate(2000%) hue-rotate(200deg) brightness(0.9) contrast(1.1);
         }
         
@@ -163,6 +167,35 @@
             margin: 8px 0;
             font-size: 14px;
         }
+
+        .patient-selector {
+            margin-bottom: 24px;
+        }
+
+        .patient-selector label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .patient-selector select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+            color: #1f2937;
+            cursor: pointer;
+        }
+
+        .patient-selector select:focus {
+            outline: none;
+            border-color: #1d4ed8;
+            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -172,6 +205,17 @@
             <h1>Dela hälsodokument</h1>
             <p class="subtitle">Ladda upp dina hälsofiler till MMDCare</p>
         </div>
+        
+        <div class="patient-selector">
+            <label for="patientSelect">Välj patient:</label>
+            <select id="patientSelect">
+                <option value="">-- Välj patient --</option>
+                <option value="anders-boman">Anders Boman</option>
+                <option value="markus-selin">Markus Selin</option>
+                <option value="samuel-oldmark">Samuel Oldmark</option>
+            </select>
+        </div>
+        
         <p class="hint">Välj PDF- eller Excel (XLSX)-filer. Max 100 MB per fil.</p>
         <div class="file-picker">
             <button id="chooseBtn" type="button" class="choose-btn">
@@ -183,6 +227,10 @@
             <span id="fileSelectionStatus" class="file-status">Ingen fil vald</span>
         </div>
         <div id="selectedFilesContainer" class="selected-files"></div>
+        <div id="uploadedFilesSection" style="display: none; margin-bottom: 24px;">
+            <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 12px;">Uppladdade filer</h3>
+            <div id="uploadedFilesList" class="selected-files"></div>
+        </div>
         <input id="fileInput" type="file" multiple accept=".pdf,application/pdf,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
         <button id="uploadBtn">Ladda upp filer</button>
         <div id="status" class="status"></div>
@@ -197,15 +245,153 @@
         const uploadBtn = document.getElementById('uploadBtn');
         const status = document.getElementById('status');
         const fileList = document.getElementById('fileList');
+        const patientSelect = document.getElementById('patientSelect');
 
-        // Get transfer ID from URL parameters
+        let transferId = null;
+        let uploadedFiles = []; // Track all uploaded files
+        let hasUploaded = false; // Track if at least one upload has been completed
+
+        // Patient list - must match the one in index.html
+        const patients = [
+            { name: 'Anders Boman', id: 'anders-boman' },
+            { name: 'Markus Selin', id: 'markus-selin' },
+            { name: 'Samuel Oldmark', id: 'samuel-oldmark' }
+        ];
+
+        // Get transfer ID from URL parameters (for backward compatibility with QR code)
         const urlParams = new URLSearchParams(window.location.search);
-        const transferId = urlParams.get('transferId');
+        const urlTransferId = urlParams.get('transferId');
 
-        if (!transferId) {
-            status.textContent = "Ogiltig överföringssession. Skanna QR‑koden igen.";
-            status.className = "status error";
+        if (urlTransferId) {
+            // QR code flow - use transferId from URL (backward compatibility)
+            transferId = urlTransferId;
+            patientSelect.style.display = 'none';
+            patientSelect.parentElement.style.display = 'none';
+            uploadBtn.disabled = false;
+            status.textContent = "";
+            status.className = "status";
+        } else {
+            // Patient selection flow - require patient selection
             uploadBtn.disabled = true;
+            status.textContent = ""; // No error message initially
+            status.className = "status";
+            patientSelect.addEventListener('change', handlePatientSelection);
+        }
+
+        async function handlePatientSelection() {
+            const selectedPatientId = patientSelect.value;
+            
+            if (!selectedPatientId) {
+                transferId = null;
+                uploadBtn.disabled = true;
+                status.textContent = "Välj en patient för att fortsätta.";
+                status.className = "status error";
+                return;
+            }
+
+            // Try to get existing transferId for this patient from the server
+            // This will work even if the doctor created it on a different device
+            try {
+                uploadBtn.disabled = true;
+
+                // Get existing transfer ID for this patient (created by web page)
+                // This ensures mobile and web use the SAME transfer ID
+                console.log('Getting transfer ID for patient:', selectedPatientId);
+                const getResponse = await fetch(`/api/transfers?patientId=${selectedPatientId}`, {
+                    cache: 'no-store'
+                });
+                
+                if (getResponse.ok) {
+                    const data = await getResponse.json();
+                    transferId = data.transferId;
+                    if (data.existing) {
+                        console.log('Using existing transfer ID for patient:', selectedPatientId, transferId);
+                    } else {
+                        console.log('Created new transfer ID for patient:', selectedPatientId, transferId);
+                    }
+                } else {
+                    // If GET fails, try POST as fallback
+                    console.log('GET failed, creating new transfer via POST');
+                    const postResponse = await fetch('/api/transfers', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ patientId: selectedPatientId })
+                    });
+                    
+                    if (postResponse.ok) {
+                        const data = await postResponse.json();
+                        transferId = data.transferId;
+                        console.log('Created NEW transfer ID for patient (POST fallback):', selectedPatientId, transferId);
+                    } else {
+                        const errorText = await postResponse.text();
+                        console.error('Failed to create transfer:', errorText);
+                        throw new Error('Kunde inte skapa överföringssession');
+                    }
+                }
+
+                // Store in localStorage for local reference
+                localStorage.setItem(`patient_transfer_${selectedPatientId}`, transferId);
+                
+                // Also store patient info with transferId
+                const patient = patients.find(p => p.id === selectedPatientId);
+                if (patient) {
+                    localStorage.setItem(`transfer_patient_${transferId}`, JSON.stringify({
+                        patientId: selectedPatientId,
+                        patientName: patient.name
+                    }));
+                }
+
+                uploadBtn.disabled = false;
+                status.textContent = "";
+                status.className = "status";
+                
+                // CRITICAL: Clear all old uploaded files when patient is selected
+                // This ensures mobile page starts fresh after doctor logout
+                uploadedFiles = [];
+                hasUploaded = false;
+                updateUploadedFilesDisplay();
+                
+                // Clear old localStorage data for this patient
+                const oldTransferId = localStorage.getItem(`patient_transfer_${selectedPatientId}`);
+                if (oldTransferId && oldTransferId !== transferId) {
+                    localStorage.removeItem(`transfer_patient_${oldTransferId}`);
+                    localStorage.removeItem(`mmd_files_${oldTransferId}`);
+                }
+                
+                // Check for existing uploaded files (should be empty for new transfer)
+                await checkExistingUploads();
+                
+                // Ensure transfer is open for new uploads (reopen if closed)
+                if (transferId) {
+                    try {
+                        const statusResponse = await fetch(`/api/complete?transferId=${transferId}`);
+                        if (statusResponse.ok) {
+                            const statusData = await statusResponse.json();
+                            // If transfer has files, it's from an old session - clear it
+                            if (statusData.files && statusData.files.length > 0) {
+                                console.log('Transfer has old files - clearing mobile state');
+                                uploadedFiles = [];
+                                hasUploaded = false;
+                                updateUploadedFilesDisplay();
+                                // Reset button text
+                                chooseBtn.innerHTML = `
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                        <path d="M12 5v14M5 12h14" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    Välj filer
+                                `;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error checking transfer status:', e);
+                    }
+                }
+            } catch (error) {
+                console.error('Error getting/creating transfer session:', error);
+                status.textContent = `Fel: ${error.message}`;
+                status.className = "status error";
+                uploadBtn.disabled = true;
+            }
         }
 
         // Open native picker when clicking custom button
@@ -217,10 +403,16 @@
         fileInput.addEventListener('change', function() {
             const files = Array.from(this.files);
             fileList.innerHTML = '';
-            renderSelectedFiles(files);
+            
+            // Only show selected files in the selectedFilesContainer, not in uploaded files
+            // Clear the selected files container (selected files only, not uploaded files)
+            const selectedFiles = selectedFilesContainer.querySelectorAll('.selected-file-card, .selected-header, .selected-list');
+            selectedFiles.forEach(el => el.remove());
             
             if (files.length > 0) {
-                // Visa endast en sammanfattning ovanför, detaljer visas efter uppladdning
+                // Render selected files in the selectedFilesContainer (above "Uppladdade filer")
+                renderSelectedFiles(files);
+                // Update status text
                 fileSelectionStatus.textContent = files.length === 1 ? '1 fil vald' : `${files.length} filer valda`;
             } else {
                 fileSelectionStatus.textContent = 'Ingen fil vald';
@@ -228,7 +420,10 @@
         });
 
         function renderSelectedFiles(files) {
-            selectedFilesContainer.innerHTML = '';
+            // Clear selected files container (only selected files, uploaded files are in uploadedFilesSection)
+            const selectedFiles = selectedFilesContainer.querySelectorAll('.selected-file-card, .selected-header, .selected-list');
+            selectedFiles.forEach(el => el.remove());
+            
             if (files.length === 0) return;
             if (files.length === 1) {
                 const f = files[0];
@@ -242,7 +437,7 @@
             // Header
             const header = document.createElement('div');
             header.className = 'selected-header';
-            header.innerHTML = `<span>Uppladdade filer (${files.length})</span><span class="chevron">›</span>`;
+            header.innerHTML = `<span>Valda filer (${files.length})</span><span class="chevron">›</span>`;
             selectedFilesContainer.appendChild(header);
 
             // List
@@ -278,8 +473,25 @@
             status.className = "status progress";
 
             try {
+                // Verify transfer exists and is open before uploading
+                if (!transferId) {
+                    throw new Error('Ingen överföringssession hittades');
+                }
+                
+                const verifyResponse = await fetch(`/api/complete?transferId=${transferId}`, {
+                    cache: 'no-store'
+                });
+                if (!verifyResponse.ok) {
+                    throw new Error('Överföringssessionen hittades inte');
+                }
+                const verifyData = await verifyResponse.json();
+                if (verifyData.status !== 'open') {
+                    console.log('Transfer status:', verifyData.status, '- reopening if needed');
+                    // The server will automatically reopen closed transfers, but let's verify
+                }
+                
                 // Upload files to API endpoints (most reliable for cross-context communication)
-                const uploadedFiles = [];
+                const newUploadedFiles = [];
                 
                 for (const file of files) {
                     console.log('Uploading file:', file.name, 'for transfer:', transferId);
@@ -288,7 +500,8 @@
 
                     const response = await fetch(`/api/upload?transferId=${transferId}`, {
                         method: 'POST',
-                        body: formData
+                        body: formData,
+                        cache: 'no-store'
                     });
 
                     console.log('Upload response status:', response.status);
@@ -308,31 +521,59 @@
                         transferId: transferId
                     };
                     
-                    uploadedFiles.push(fileData);
+                    newUploadedFiles.push(fileData);
                 }
 
-                // Mark transfer as complete via API (this is what the desktop polls)
-                console.log('Marking transfer as complete via API:', transferId);
-                const completeResponse = await fetch(`/api/complete?transferId=${transferId}`, {
-                    method: 'POST'
-                });
-                console.log('API completion response status:', completeResponse.status);
+                // Don't mark transfer as complete if we want to allow more uploads
+                // Only mark as complete if this is the final upload (we'll keep it open for multiple uploads)
+                // The transfer will be marked as closed when the doctor views it on the dashboard
+                console.log('Upload completed, keeping transfer open for additional uploads');
+
+                // Add uploaded files to our tracking array
+                uploadedFiles.push(...newUploadedFiles);
+                hasUploaded = true;
                 
-                if (!completeResponse.ok) {
-                    throw new Error('Kunde inte markera överföringen som slutförd');
-                }
-
                 // Also store in localStorage as backup
                 const storageKey = `mmd_files_${transferId}`;
                 localStorage.setItem(storageKey, JSON.stringify(uploadedFiles));
                 console.log('Files also stored in localStorage as backup:', uploadedFiles);
+                
+                // Move uploaded files to "Uppladdade filer" section
+                // Clear selected files from selectedFilesContainer (they're now uploaded)
+                const selectedFiles = selectedFilesContainer.querySelectorAll('.selected-file-card:not(.additional-upload), .selected-header, .selected-list');
+                selectedFiles.forEach(el => el.remove());
+                
+                // Update the uploaded files display with all uploaded files
+                updateUploadedFilesDisplay();
+                
+                // Change button text to "Ladda upp fler filer"
+                const chooseBtnText = chooseBtn.querySelector('svg').nextSibling;
+                if (chooseBtnText) {
+                    chooseBtnText.textContent = ' Ladda upp fler filer';
+                } else {
+                    chooseBtn.innerHTML = `
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M12 5v14M5 12h14" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Ladda upp fler filer
+                    `;
+                }
 
-                status.textContent = "Uppladdningen slutförd! Du kan stänga den här sidan.";
+                // Show success message
+                status.textContent = "Uppladdningen slutförd!";
                 status.className = "status success";
                 
-                // Clear file input
+                // Hide success message after 5 seconds
+                setTimeout(() => {
+                    if (status.textContent === "Uppladdningen slutförd!") {
+                        status.textContent = "";
+                        status.className = "status";
+                    }
+                }, 5000);
+                
+                // Clear file input and selected files display
                 fileInput.value = '';
-                fileList.innerHTML = '';
+                fileSelectionStatus.textContent = 'Ingen fil vald';
                 
             } catch (error) {
                 status.textContent = `Uppladdningen misslyckades: ${error.message}`;
@@ -359,6 +600,107 @@
                 throw new Error(errorText || 'Upload failed');
             }
             console.log('File uploaded successfully:', file.name);
+        }
+
+        function updateUploadedFilesDisplay() {
+            const uploadedFilesSection = document.getElementById('uploadedFilesSection');
+            const uploadedFilesList = document.getElementById('uploadedFilesList');
+            
+            if (uploadedFiles.length === 0) {
+                uploadedFilesSection.style.display = 'none';
+                return;
+            }
+            
+            uploadedFilesSection.style.display = 'block';
+            uploadedFilesList.innerHTML = '';
+            
+            if (uploadedFiles.length === 1) {
+                const f = uploadedFiles[0];
+                const card = document.createElement('div');
+                card.className = 'selected-file-card';
+                card.innerHTML = `<strong>${f.name}</strong><br>Storlek: ${Math.round(f.size/1024)} KB · Typ: ${f.type || 'okänd'}`;
+                uploadedFilesList.appendChild(card);
+            } else {
+                // Header
+                const header = document.createElement('div');
+                header.className = 'selected-header';
+                header.innerHTML = `<span>Uppladdade filer (${uploadedFiles.length})</span><span class="chevron">›</span>`;
+                uploadedFilesList.appendChild(header);
+
+                // List
+                const list = document.createElement('div');
+                list.className = 'selected-list show'; // Show by default for uploaded files
+                uploadedFiles.forEach(f => {
+                    const card = document.createElement('div');
+                    card.className = 'selected-file-card';
+                    card.innerHTML = `<strong>${f.name}</strong><br>Storlek: ${Math.round(f.size/1024)} KB · Typ: ${f.type || 'okänd'}`;
+                    list.appendChild(card);
+                });
+                uploadedFilesList.appendChild(list);
+
+                // Toggle behavior
+                header.addEventListener('click', () => {
+                    const expanded = list.classList.toggle('show');
+                    header.classList.toggle('expanded', expanded);
+                });
+            }
+        }
+
+        // Check for existing uploaded files when patient is selected
+        async function checkExistingUploads() {
+            if (!transferId) return;
+            
+            try {
+                const response = await fetch(`/api/complete?transferId=${transferId}`, {
+                    cache: 'no-store',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate'
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    // CRITICAL: Only show files if transfer is from current session
+                    // If transfer has files but we just created it, those are old files - ignore them
+                    if (data.files && data.files.length > 0 && hasUploaded) {
+                        // Only show files if we've already uploaded in this session
+                        // Convert server file format to our format
+                        uploadedFiles = data.files.map(f => ({
+                            name: f.name,
+                            size: f.size,
+                            type: f.mimetype,
+                            uploadedAt: f.uploadedAt,
+                            transferId: transferId
+                        }));
+                        updateUploadedFilesDisplay();
+                        
+                        // Change button text
+                        chooseBtn.innerHTML = `
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M12 5v14M5 12h14" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Ladda upp fler filer
+                        `;
+                    } else {
+                        // Transfer is empty or we haven't uploaded yet - clear mobile state
+                        uploadedFiles = [];
+                        hasUploaded = false;
+                        updateUploadedFilesDisplay();
+                        // Reset button text
+                        chooseBtn.innerHTML = `
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M12 5v14M5 12h14" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Välj filer
+                        `;
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking existing uploads:', error);
+                // On error, clear state
+                uploadedFiles = [];
+                hasUploaded = false;
+                updateUploadedFilesDisplay();
+            }
         }
     </script>
 </body>

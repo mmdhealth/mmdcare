@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>MMDCare - BankID Inloggning</title>
     <link rel="stylesheet" href="styles.css">
     <style>
         /* Login page specific styles */
         .login-container {
             min-height: 100vh;
-            background-color: #ECECEC;
+            background-color: #F0F2F5;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -71,9 +74,117 @@
             color: #1A1D28;
         }
 
-        /* QR Code Section */
-        .qr-section {
+        /* Patient List Section */
+        .patient-list-section {
             margin-bottom: 20px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .patient-list-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .patient-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .patient-item:hover {
+            border-color: #1d4ed8;
+            box-shadow: 0 2px 8px rgba(29, 78, 216, 0.1);
+        }
+
+        .patient-item.selected {
+            border-color: #1d4ed8;
+            background: #eff6ff;
+        }
+
+        .select-patient-button {
+            width: 100%;
+            padding: 14px 24px;
+            background: #1d4ed8;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 20px;
+        }
+
+        .select-patient-button:hover {
+            background: #1e40af;
+            box-shadow: 0 2px 8px rgba(29, 78, 216, 0.2);
+        }
+
+        .select-patient-button:active {
+            transform: scale(0.98);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .patient-indicator-circle {
+            position: absolute;
+            right: 20px;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #1d4ed8;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .patient-indicator-circle.selected {
+            background: #1d4ed8;
+        }
+
+        .patient-indicator-circle.selected::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .patient-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: #1f2937;
+        }
+
+        .patient-status {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 8px;
+        }
+
+        .patient-status.waiting {
+            color: #f59e0b;
+        }
+
+        .patient-status.ready {
+            color: #059669;
         }
 
         /* BankID Section */
@@ -108,23 +219,6 @@
         }
 
 
-        .qr-code {
-            width: 200px;
-            height: 200px;
-            cursor: pointer;
-            border: 3px solid transparent;
-            border-radius: 8px;
-            transition: border-color 0.2s ease;
-        }
-
-        .qr-code:hover {
-            border-color: #1D212B;
-        }
-
-        .qr-code.blurred {
-            filter: blur(8px);
-            -webkit-filter: blur(8px);
-        }
 
         /* Responsive adjustments */
         @media (max-width: 480px) {
@@ -144,13 +238,8 @@
                 margin-bottom: 15px;
             }
             
-            .qr-section {
+            .patient-list-section {
                 margin-bottom: 15px;
-            }
-            
-            .qr-code {
-                width: 180px;
-                height: 180px;
             }
         }
     </style>
@@ -166,13 +255,13 @@
                 </div>
             </div>
 
-            <!-- QR Code Section -->
-            <div class="qr-section">
-            <div id="qr-container" style="width: 200px; height: 200px; margin: 0 auto; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.5); border-radius: 12px;">
-                <img id="qr-code" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2ZmZmZmZiIvPjx0ZXh0IHg9IjEwMCIgeT0iMTAwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiNjY2MiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Lb2FyIGdlbmVyZXJhcy4uLjwvdGV4dD48L3N2Zz4=" alt="QR Code" class="qr-code" style="opacity: 0; transition: opacity 0.8s ease-in-out; width: 200px; height: 200px; object-fit: contain;">
-            </div>
-                <p style="font-size: 12px; color: #999; margin-top: 32px; font-style: italic;">Skanna för att dela hälsoinformation</p>
-                <p id="transfer-status" style="font-size: 12px; color: #666; margin-top: 4px;">Väntar på filuppladdning</p>
+            <!-- Patient List Section -->
+            <div class="patient-list-section">
+                <h2 class="patient-list-title">Patienter</h2>
+                <div id="patient-list">
+                    <!-- Patient items will be dynamically added here -->
+                </div>
+                <button id="select-patient-button" class="select-patient-button">Välj patient</button>
             </div>
 
         </div>
@@ -180,76 +269,395 @@
 
     <script>
         let currentTransferId = null;
+        let currentPatientName = null;
         let eventSource = null;
+        let pollIntervalId = null;
+        let uploadDetected = false;
+        let initialTransferStatus = null; // Track the initial status when patient is selected
 
-        // Always show login page - NO AUTOMATIC REDIRECT
+        // Patient list
+        const patients = [
+            { name: 'Anders Boman', id: 'anders-boman' },
+            { name: 'Markus Selin', id: 'markus-selin' },
+            { name: 'Samuel Oldmark', id: 'samuel-oldmark' }
+        ];
+
+        // Always redirect to login page first - login.html will handle authentication check
+        // and redirect back here if already authenticated
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Showing login page...'); // Debug log
-            generateFreshQRCode();
+            // Check if we came from login page (to avoid redirect loop)
+            const fromLogin = sessionStorage.getItem('fromLogin');
+            
+            if (!fromLogin) {
+                // Not from login page, redirect to login first
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // Clear the flag
+            sessionStorage.removeItem('fromLogin');
+            
+            // Check if user is authenticated
+            const authData = localStorage.getItem('mmdcare_auth');
+            
+            if (!authData) {
+                // Not authenticated, redirect to login page
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            try {
+                const auth = JSON.parse(authData);
+                if (!auth.authenticated) {
+                    // Not authenticated, redirect to login page
+                    window.location.href = 'login.html';
+                    return;
+                }
+            } catch (e) {
+                // Invalid auth data, redirect to login page
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // User is authenticated, load patient list
+            console.log('User authenticated, loading patient list...');
+            loadPatientList();
+            
+            // Add click handler for select patient button
+            const selectButton = document.getElementById('select-patient-button');
+            if (selectButton) {
+                selectButton.addEventListener('click', handleSelectPatientButton);
+            }
         });
 
-        async function generateFreshQRCode() {
-            try {
-                // Create a new transfer session using local API
-                const response = await fetch('/api/transfers', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+        let selectedPatientId = null;
+        let selectedPatientName = null;
+
+        async function handleSelectPatientButton() {
+            if (!selectedPatientId || !selectedPatientName) {
+                // No patient selected, show message or do nothing
+                return;
+            }
+            
+            // CRITICAL: Clear dashboard BEFORE selecting patient
+            // This ensures old files are removed before new uploads
+            console.log('Clearing dashboard before patient selection');
+            await clearDashboardForPatient();
+            
+            // Select the patient and show waiting message
+            selectPatient(selectedPatientId, selectedPatientName);
+        }
+        
+        async function clearDashboardForPatient() {
+            // Clear ALL localStorage file data for this patient
+            const patientIds = ['anders-boman', 'markus-selin', 'samuel-oldmark'];
+            patientIds.forEach(patientId => {
+                const transferId = localStorage.getItem(`patient_transfer_${patientId}`);
+                if (transferId) {
+                    // Clear all file-related localStorage
+                    localStorage.removeItem(`mmd_files_${transferId}`);
+                    localStorage.removeItem(`transfer_patient_${transferId}`);
+                    localStorage.removeItem(`transfer_created_${transferId}`);
+                    console.log('Cleared localStorage for transfer:', transferId);
+                }
+            });
+            
+            // Clear any remaining file data
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('mmd_files_') || 
+                    key === 'uploadedFiles' ||
+                    key === 'currentTransferId') {
+                    localStorage.removeItem(key);
+                    console.log('Cleared:', key);
+                }
+            });
+            
+            // Also clear currentTransferId to ensure dashboard starts fresh
+            localStorage.removeItem('currentTransferId');
+            
+            console.log('✅ Dashboard cleared - ready for new patient selection');
+        }
+
+        function loadPatientList() {
+            const patientListContainer = document.getElementById('patient-list');
+            patientListContainer.innerHTML = '';
+
+            patients.forEach((patient, index) => {
+                const patientItem = document.createElement('div');
+                patientItem.className = 'patient-item';
+                patientItem.dataset.patientId = patient.id;
+                patientItem.dataset.patientName = patient.name;
+
+                // First patient is pre-selected
+                const isFirst = index === 0;
+                if (isFirst) {
+                    patientItem.classList.add('selected');
+                    selectedPatientId = patient.id;
+                    selectedPatientName = patient.name;
+                }
+
+                // Patient card with circle indicator
+                patientItem.innerHTML = `
+                    <div class="patient-name">${patient.name}</div>
+                    <div class="patient-indicator-circle ${isFirst ? 'selected' : ''}"></div>
+                `;
+
+                // Store patient data on the item for button click
+                patientItem.dataset.patientId = patient.id;
+                patientItem.dataset.patientName = patient.name;
+                
+                // Highlight patient on click, but don't select yet
+                patientItem.addEventListener('click', () => {
+                    // Clear previous selection
+                    document.querySelectorAll('.patient-item').forEach(item => {
+                        item.classList.remove('selected');
+                        const circle = item.querySelector('.patient-indicator-circle');
+                        if (circle) {
+                            circle.classList.remove('selected');
+                        }
+                    });
+                    // Select this patient
+                    patientItem.classList.add('selected');
+                    const circle = patientItem.querySelector('.patient-indicator-circle');
+                    if (circle) {
+                        circle.classList.add('selected');
+                    }
+                    selectedPatientId = patient.id;
+                    selectedPatientName = patient.name;
                 });
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    currentTransferId = data.transferId;
-                    console.log('Generated fresh transfer ID:', currentTransferId);
+                patientListContainer.appendChild(patientItem);
+            });
+        }
+
+        async function selectPatient(patientId, patientName) {
+            console.log('Selecting patient:', patientName, 'ID:', patientId);
+            currentPatientName = patientName;
+            
+            // CRITICAL: Clear dashboard and old files for this patient
+            // This ensures old files are deleted when selecting a patient
+            await clearDashboardForPatient();
+            
+            const oldTransferId = localStorage.getItem(`patient_transfer_${patientId}`);
+            if (oldTransferId) {
+                console.log('Clearing old transfer for patient:', oldTransferId);
+                // Clear old localStorage data
+                localStorage.removeItem(`transfer_patient_${oldTransferId}`);
+                localStorage.removeItem(`mmd_files_${oldTransferId}`);
+                localStorage.removeItem(`transfer_created_${oldTransferId}`);
+            }
+            
+            // CRITICAL: Always create a NEW transfer - never reuse old ones
+            // Server will automatically delete old transfer when creating new one
+            let transferId = null;
+            
+            try {
+                // Always create a new transfer (server will handle deleting old one)
+                console.log('Creating NEW transfer for patient:', patientName);
+                const postResponse = await fetch('/api/transfers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patientId: patientId })
+                });
+                
+                if (postResponse.ok) {
+                    const data = await postResponse.json();
+                    transferId = data.transferId;
+                    console.log('Created NEW transfer ID for patient:', patientName, transferId);
                     
-                    // Store transfer ID in localStorage for dashboard
-                    localStorage.setItem('currentTransferId', currentTransferId);
-                    
-                    // Update QR code with new transfer ID - points to local mobile page
-                    const mobileUrl = `${window.location.origin}/mobile-upload.html?transferId=${currentTransferId}`;
-                    const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(mobileUrl)}&size=200`;
-                    
-                    // Set the new QR code and animate it in
-                    const qrImage = document.getElementById('qr-code');
-                    qrImage.src = qrUrl;
-                    
-                    // Trigger dissolve animation
-                    setTimeout(() => {
-                        qrImage.style.opacity = '1';
-                    }, 100);
-                    
-                    // Start monitoring for this new transfer
-                    startFileMonitoring();
+                    // Verify the transfer is empty (should always be empty for new transfers)
+                    const verifyResponse = await fetch(`/api/files?transferId=${transferId}`, {
+                        cache: 'no-store'
+                    });
+                    if (verifyResponse.ok) {
+                        const verifyData = await verifyResponse.json();
+                        if (verifyData.files && verifyData.files.length > 0) {
+                            console.error('ERROR: New transfer has files! Creating replacement transfer.');
+                            // Create another new transfer
+                            const retryResponse = await fetch('/api/transfers', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ patientId: patientId })
+                            });
+                            if (retryResponse.ok) {
+                                const retryData = await retryResponse.json();
+                                transferId = retryData.transferId;
+                                console.log('Created replacement transfer ID:', transferId);
+                            }
+                        }
+                    }
                 } else {
                     console.error('Failed to create transfer session');
+                    return;
+                }
+                
+                // Store transferId for this patient in localStorage
+                const patientTransferKey = `patient_transfer_${patientId}`;
+                localStorage.setItem(patientTransferKey, transferId);
+                
+                // Also store patient info with transferId
+                localStorage.setItem(`transfer_patient_${transferId}`, JSON.stringify({
+                    patientId: patientId,
+                    patientName: patientName
+                }));
+            } catch (error) {
+                console.error('Error creating transfer session:', error);
+                return;
+            }
+
+            currentTransferId = transferId;
+            
+            // Store transfer creation timestamp for session verification
+            localStorage.setItem(`transfer_created_${transferId}`, Date.now().toString());
+            console.log('Stored transfer creation timestamp for:', transferId);
+            
+            // Reset upload detection state for new transfer
+            uploadDetected = false;
+            initialTransferStatus = null; // Will be set by checkInitialTransferStatus
+            window.initialFileCount = 0; // Reset file count
+            
+            // Show notification in top right corner
+            showUploadNotification(`Väntar på uppladdning ${patientName}`);
+
+            // Start monitoring for this patient's transfer
+            // This will check initial status and then start polling
+            startFileMonitoring(patientId);
+        }
+
+        function startFileMonitoring(patientId) {
+            if (!currentTransferId) return;
+            
+            // Clear any existing polling
+            if (pollIntervalId) {
+                clearInterval(pollIntervalId);
+                pollIntervalId = null;
+            }
+            uploadDetected = false;
+            initialTransferStatus = null; // Reset initial status
+            window.initialFileCount = 0; // Reset file count
+            
+            console.log('Starting file monitoring for patient:', currentPatientName, 'Transfer ID:', currentTransferId);
+            
+            // First, check the initial status of the transfer
+            // This will set initialTransferStatus and initialFileCount
+            checkInitialTransferStatus().then(() => {
+                console.log('Initial status checked. Status:', initialTransferStatus, 'File count:', window.initialFileCount);
+                // Only start polling if transfer is open (not closed with old files)
+                if (initialTransferStatus === 'open') {
+                    startPollingForUploads(patientId);
+                } else {
+                    console.log('Transfer is closed - waiting for new transfer creation');
+                }
+            });
+        }
+        
+        async function checkInitialTransferStatus() {
+            if (!currentTransferId) {
+                initialTransferStatus = 'open';
+                window.initialFileCount = 0;
+                return;
+            }
+            
+            try {
+                const url = `/api/complete?transferId=${currentTransferId}`;
+                const res = await fetch(url, {
+                    method: 'GET',
+                    cache: 'no-store'
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    initialTransferStatus = data.status;
+                    const initialFileCount = data.files?.length || 0;
+                    console.log('Initial transfer status:', initialTransferStatus, 'Files:', initialFileCount);
+                    
+                    // CRITICAL: For new transfers created when selecting patient, file count should be 0
+                    // Store initial file count to detect NEW uploads
+                    window.initialFileCount = initialFileCount;
+                    console.log('Set initial file count to:', window.initialFileCount);
+                    
+                    // If transfer is closed with files, it might be from old session
+                    // But since we always create new transfers, this shouldn't happen
+                    // If it does, we'll still track file count correctly
+                    if (data.status === 'closed' && initialFileCount > 0) {
+                        // Transfer is closed with files - might be old, but we'll still use it
+                        // The server ensures transfers are cleared on logout, so if it exists, it's current
+                        console.log('Transfer is closed with files - will detect new uploads by count increase');
+                    }
+                    
+                    // Ensure initial status is set
+                    if (!initialTransferStatus) {
+                        initialTransferStatus = 'open';
+                    }
+                } else {
+                    // If we can't check status, assume it's a new transfer and set to 'open'
+                    initialTransferStatus = 'open';
+                    window.initialFileCount = 0;
+                }
+            } catch (e) {
+                console.error('Error checking initial transfer status:', e);
+                // On error, assume it's a new transfer and set to 'open'
+                initialTransferStatus = 'open';
+                window.initialFileCount = 0;
+            }
+        }
+        
+        async function createNewTransferForPatient() {
+            if (!currentPatientName) return;
+            
+            // Find the patient ID from the name
+            const patient = patients.find(p => p.name === currentPatientName);
+            if (!patient) return;
+            
+            try {
+                // Create a new transfer for this patient
+                const postResponse = await fetch('/api/transfers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patientId: patient.id })
+                });
+                
+                if (postResponse.ok) {
+                    const data = await postResponse.json();
+                    const newTransferId = data.transferId;
+                    console.log('Created new transfer ID for session:', newTransferId);
+                    
+                    // Update the current transfer ID
+                    currentTransferId = newTransferId;
+                    initialTransferStatus = 'open'; // New transfer is always open
+                    
+                    // CRITICAL: Clear old localStorage data before storing new transfer
+                    const oldTransferId = localStorage.getItem(`patient_transfer_${patient.id}`);
+                    if (oldTransferId && oldTransferId !== newTransferId) {
+                        localStorage.removeItem(`transfer_patient_${oldTransferId}`);
+                        localStorage.removeItem(`mmd_files_${oldTransferId}`);
+                    }
+                    
+                    // Update localStorage with new transfer
+                    localStorage.setItem(`patient_transfer_${patient.id}`, newTransferId);
+                    localStorage.setItem(`transfer_patient_${newTransferId}`, JSON.stringify({
+                        patientId: patient.id,
+                        patientName: currentPatientName
+                    }));
                 }
             } catch (error) {
-                console.error('Error generating QR code:', error);
+                console.error('Error creating new transfer:', error);
             }
         }
 
-        function startFileMonitoring() {
-            if (!currentTransferId) return;
-            
-            console.log('Starting file monitoring for transfer:', currentTransferId);
-            // Keep the Swedish text - don't change it
-            // document.getElementById('transfer-status').textContent = 'Monitoring for file uploads...';
-            
-            // Use a simple external service to track completion
-            startPollingForUploads();
-        }
-
-        let pollIntervalId = null;
-        let uploadDetected = false;
-        
-        function startPollingForUploads() {
-            if (pollIntervalId) return;
+        function startPollingForUploads(patientId) {
+            if (pollIntervalId) {
+                console.log('Polling already active, clearing old interval');
+                clearInterval(pollIntervalId);
+            }
             
             console.log('Starting polling for uploads...');
             console.log('Transfer ID:', currentTransferId);
+            console.log('Initial file count:', window.initialFileCount);
             
             const poll = async () => {
                 try {
-                    // Check API endpoint for completion status (most reliable)
+                    // Check API endpoint for completion status
                     const url = `/api/complete?transferId=${currentTransferId}`;
                     console.log('Polling API endpoint:', url);
                     
@@ -264,20 +672,50 @@
                         const data = await res.json();
                         console.log('Polling response data:', data);
                         
-                        if (data.status === 'closed' && !uploadDetected) {
+                        // Detect new files by comparing file count
+                        const currentFileCount = data.files?.length || 0;
+                        const initialFileCount = window.initialFileCount || 0;
+                        const hasNewFiles = currentFileCount > initialFileCount;
+                        
+                        console.log('File count check - Current:', currentFileCount, 'Initial:', initialFileCount, 'Has new files:', hasNewFiles);
+                        
+                        // Redirect if:
+                        // 1. NEW files were uploaded (file count increased)
+                        // 2. We haven't already detected an upload
+                        // 3. Transfer has files (not empty)
+                        if (hasNewFiles && 
+                            !uploadDetected && 
+                            currentFileCount > 0) {
                             uploadDetected = true;
                             clearInterval(pollIntervalId);
                             pollIntervalId = null;
                             
-                            console.log('✅ Upload detected! Redirecting to dashboard...');
-                            document.getElementById('transfer-status').textContent = '✅ Uppladdning slutförd! Omdirigerar till översikt...';
-                            document.getElementById('transfer-status').style.color = '#059669';
+                            console.log('✅ New upload detected! Files:', currentFileCount, 'Clearing old files and redirecting...');
+                            
+                            // CRITICAL: Clear ALL old files before redirecting
+                            // This ensures dashboard starts fresh and only shows new files
+                            Object.keys(localStorage).forEach(key => {
+                                if (key.startsWith('mmd_files_') || 
+                                    key === 'uploadedFiles') {
+                                    localStorage.removeItem(key);
+                                    console.log('Cleared old files before redirect:', key);
+                                }
+                            });
+                            
+                            // Show success notification
+                            showUploadNotification('Uppladdning genomförd', 'success');
+                            
+                            // Store the current transfer ID and patient name for the dashboard to use
+                            localStorage.setItem('currentTransferId', currentTransferId);
+                            localStorage.setItem('currentPatientName', currentPatientName);
+                            // Store when this transfer was created to verify it's from current session
+                            localStorage.setItem(`transfer_created_${currentTransferId}`, Date.now().toString());
                             
                             setTimeout(() => {
                                 redirectToOverview();
                             }, 1500);
                         } else {
-                            console.log('Transfer status:', data.status, 'Upload detected:', uploadDetected);
+                            console.log('Waiting for upload - Status:', data.status, 'Files:', currentFileCount, 'Initial:', initialFileCount, 'Upload detected:', uploadDetected);
                         }
                     } else {
                         console.log('Polling failed with status:', res.status);
@@ -294,14 +732,66 @@
             poll(); // Initial poll
         }
 
+        function showUploadNotification(message, type = 'waiting') {
+            // Remove any existing notification
+            const existingNotification = document.querySelector('.upload-notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+            
+            // Create notification
+            const notification = document.createElement('div');
+            notification.className = 'upload-notification';
+            
+            // Set colors - white background with black text
+            const indicatorColor = type === 'success' ? '#059669' : '#f59e0b';
+            
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: white;
+                color: #1f2937;
+                padding: 16px 24px;
+                border-radius: 12px;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+                z-index: 10000;
+                font-size: 14px;
+                max-width: 350px;
+                border: 1px solid #e5e7eb;
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 12px; height: 12px; background: ${indicatorColor}; border-radius: 50%; flex-shrink: 0;"></div>
+                    <div>
+                        <div style="font-weight: 600;">${message}</div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 4 seconds (or keep for success until redirect)
+            if (type === 'waiting') {
+                // Keep waiting notification visible until upload completes
+                // It will be replaced by success notification
+            } else {
+                // Success notification - remove after 3 seconds (redirect happens after 1.5s)
+                setTimeout(() => {
+                    notification.style.animation = 'slideIn 0.3s ease-out reverse';
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 300);
+                }, 3000);
+            }
+        }
 
         function redirectToOverview() {
-            // Store the current transfer ID for the dashboard to use
-            localStorage.setItem('currentTransferId', currentTransferId);
             // Redirect to the main platform (översikt page)
             window.location.href = 'dashboard.html';
         }
-
 
         // Clean up on page unload
         window.addEventListener('beforeunload', function() {

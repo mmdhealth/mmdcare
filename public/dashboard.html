@@ -54,8 +54,7 @@
         <main class="main-content">
             <div class="content-header">
                 <div class="patient-info">
-                    <h1>Patient: Anders Boman</h1>
-                    <p class="patient-id">19650314-xxxx</p>
+                    <h1 id="patient-name-header">Patient: Anders Boman</h1>
                     <p class="patient-date">2024-09-09</p>
                 </div>
                 <div class="user-info">
@@ -135,8 +134,87 @@
             showLogoutOverlay();
         }
 
+        // Function to clear dashboard the EXACT SAME way as logout
+        // But preserve currentTransferId if it exists (from redirect after upload)
+        function clearDashboardLikeLogout() {
+            console.log('Clearing dashboard - EXACT SAME PROCESS AS LOGOUT');
+            
+            // Preserve currentTransferId if it exists (from redirect)
+            const savedTransferId = localStorage.getItem('currentTransferId');
+            const savedPatientName = localStorage.getItem('currentPatientName');
+            
+            // STEP 1: Clear UI immediately - remove ALL files (PDF and Excel) - EXACT SAME AS LOGOUT
+            uploadedFiles = [];
+            currentTransferId = null;
+            
+            const categoriesContainer = document.getElementById('file-categories');
+            if (categoriesContainer) {
+                categoriesContainer.innerHTML = '<p class="empty-category">Inga filer att visa</p>';
+            }
+            
+            const journalContent = document.querySelector('.journal-content');
+            if (journalContent) {
+                journalContent.innerHTML = '';
+            }
+            
+            updateFileDisplay();
+            clearAllFiles();
+            
+            // STEP 2: Clear ALL localStorage - EXACT SAME AS LOGOUT (same keys, same order)
+            const allKeys = Object.keys(localStorage);
+            allKeys.forEach(key => {
+                // Clear EXACTLY what logout clears
+                if (key.startsWith('mmd_files_') || 
+                    key.startsWith('transfer_') ||  // This includes transfer_patient_ and transfer_created_
+                    key.startsWith('patient_transfer_') ||
+                    key === 'currentTransferId' ||
+                    key === 'uploadedFiles') {
+                    localStorage.removeItem(key);
+                    console.log('Cleared (same as logout):', key);
+                }
+            });
+            
+            // Restore currentTransferId and currentPatientName if they were saved (from redirect)
+            if (savedTransferId) {
+                localStorage.setItem('currentTransferId', savedTransferId);
+                console.log('Preserved currentTransferId for new files:', savedTransferId);
+            }
+            if (savedPatientName) {
+                localStorage.setItem('currentPatientName', savedPatientName);
+            }
+            
+            console.log('✅ Dashboard cleared EXACTLY like logout');
+        }
+
         // Trigger dashboard page animations
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            // CRITICAL: Use the SAME clearing process as logout FIRST
+            console.log('Dashboard loaded - Clearing ALL files (same as logout)');
+            clearDashboardLikeLogout();
+            
+            // Wait a moment to ensure clearing completes
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // CRITICAL: Store session start time ONLY if this is a new session (not a redirect from upload)
+            // If we're being redirected from index.html after upload, sessionStartTime should already exist
+            // If it doesn't exist, this is a new session after logout - set it now
+            if (!localStorage.getItem('sessionStartTime')) {
+                const sessionStartTime = Date.now();
+                localStorage.setItem('sessionStartTime', sessionStartTime.toString());
+                console.log('New session started after logout, timestamp:', sessionStartTime);
+            } else {
+                console.log('Existing session, timestamp:', localStorage.getItem('sessionStartTime'));
+            }
+            
+            // Update patient name immediately on page load
+            const savedPatientName = localStorage.getItem('currentPatientName');
+            if (savedPatientName) {
+                const patientNameHeader = document.getElementById('patient-name-header');
+                if (patientNameHeader) {
+                    patientNameHeader.textContent = `Patient: ${savedPatientName}`;
+                }
+            }
+            
             // Animate cards with staggered timing
             const cards = document.querySelectorAll('.card-animate');
             cards.forEach((card, index) => {
@@ -145,7 +223,7 @@
                 }, 100 + (index * 100));
             });
             
-            // Initialize file upload functionality
+            // Initialize file upload functionality (will load ONLY new files)
             initializeFileUpload();
             
             // Add escape key listener for logout overlay
@@ -157,91 +235,189 @@
         });
 
         async function initializeFileUpload() {
-            // Check if there's a transfer ID in localStorage from login page
+            console.log('Dashboard initializeFileUpload - Starting with loading state');
+            
+            // STEP 1: Show loading state while clearing old data
+            const categoriesContainer = document.getElementById('file-categories');
+            const journalContent = document.querySelector('.journal-content');
+            
+            if (categoriesContainer) {
+                categoriesContainer.innerHTML = '<p class="empty-category">Laddar filer...</p>';
+            }
+            if (journalContent) {
+                journalContent.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 20px;">Laddar...</p>';
+            }
+            
+            // STEP 2: Clear ALL old data in background (wait a bit to ensure clearing completes)
+            uploadedFiles = [];
+            currentTransferId = null;
+            
+            // Clear ALL localStorage file data
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('mmd_files_') || 
+                    key === 'uploadedFiles') {
+                    localStorage.removeItem(key);
+                    console.log('Cleared old files:', key);
+                }
+            });
+            
+            // Wait a moment to ensure clearing is complete
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // STEP 3: Clear display completely
+            if (categoriesContainer) {
+                categoriesContainer.innerHTML = '<p class="empty-category">Inga filer att visa</p>';
+            }
+            if (journalContent) {
+                journalContent.innerHTML = '';
+            }
+            updateFileDisplay();
+            
+            // Update patient name from localStorage
+            const savedPatientName = localStorage.getItem('currentPatientName');
+            if (savedPatientName) {
+                const patientNameHeader = document.getElementById('patient-name-header');
+                if (patientNameHeader) {
+                    patientNameHeader.textContent = `Patient: ${savedPatientName}`;
+                    console.log('Updated patient name to:', savedPatientName);
+                }
+            }
+            
+            // STEP 4: Get transferId from redirect and load ONLY new files
             const savedTransferId = localStorage.getItem('currentTransferId');
-            console.log('Checking localStorage for transfer ID:', savedTransferId);
+            console.log('Checking for transfer ID from redirect:', savedTransferId);
             
             if (savedTransferId) {
-                currentTransferId = savedTransferId;
-                console.log('Found transfer ID:', currentTransferId);
-                
-                // Show loading state
-                console.log('Loading files from mobile app...');
-                
-                // Always load fresh files from mobile app when coming from redirect
-                await loadUploadedFiles();
-                startFileEventStream();
-                
+                // Verify the transfer exists on the server and has files
+                try {
+                    const verifyResponse = await fetch(`/api/files?transferId=${savedTransferId}`, {
+                        cache: 'no-store',
+                        headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache'
+                        }
+                    });
+                    
+                    if (verifyResponse.ok) {
+                        const verifyData = await verifyResponse.json();
+                        console.log('Transfer verification response:', verifyData);
+                        console.log('Files in transfer:', verifyData.files?.length || 0);
+                        
+                        // CRITICAL: Only load files if they exist on server
+                        // These are the NEW files - old files already cleared above
+                        if (verifyData.files && verifyData.files.length > 0) {
+                            currentTransferId = savedTransferId;
+                            console.log('✅ Loading NEW files from server:', currentTransferId, 'File count:', verifyData.files.length);
+                            await loadUploadedFiles();
+                            startFileEventStream();
+                        } else {
+                            // No files on server - show empty
+                            console.log('Transfer has no files - showing empty');
+                            localStorage.removeItem('currentTransferId');
+                            currentTransferId = null;
+                            uploadedFiles = [];
+                            updateFileDisplay();
+                        }
+                    } else {
+                        // Transfer doesn't exist - show empty
+                        console.log('Transfer not found on server - showing empty');
+                        localStorage.removeItem('currentTransferId');
+                        currentTransferId = null;
+                        uploadedFiles = [];
+                        updateFileDisplay();
+                    }
+                } catch (error) {
+                    console.error('Error verifying transfer:', error);
+                    localStorage.removeItem('currentTransferId');
+                    currentTransferId = null;
+                    uploadedFiles = [];
+                    updateFileDisplay();
+                }
             } else {
-                console.log('No transfer ID found in localStorage');
-                // Load any previously saved files from localStorage as fallback
-                loadFilesFromStorage();
-                console.log('Please use the QR code from the login page to upload files');
+                // No transferId - empty state
+                console.log('No transfer ID - showing empty state');
+                currentTransferId = null;
+                uploadedFiles = [];
+                updateFileDisplay();
             }
         }
 
         async function loadUploadedFiles() {
             if (!currentTransferId) {
                 console.log('No transfer ID available for loading files');
+                uploadedFiles = [];
+                updateFileDisplay();
                 return;
             }
 
             console.log('Loading files for transfer ID:', currentTransferId);
+            
             try {
-                // Load files from API endpoint (most reliable for cross-context communication)
+                // Load files ONLY from API endpoint (in-memory server state)
+                // NEVER load from localStorage, blob storage, or any persistent storage
+                // The server will return empty array if transfer was cleared by logout
                 const url = `/api/files?transferId=${currentTransferId}`;
                 console.log('Fetching files from API:', url);
                 
-                const response = await fetch(url);
+                const response = await fetch(url, {
+                    method: 'GET',
+                    cache: 'no-store',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
+                });
                 console.log('API response status:', response.status);
                 
                 if (response.ok) {
                     const data = await response.json();
                     console.log('Loaded files data from API:', data);
+                    console.log('Files array:', data.files);
+                    
+                    // CRITICAL: Trust the server - if it returns files, they're from current session
+                    // Server ensures all transfers are cleared on logout, so files here are current
                     uploadedFiles = data.files || [];
-                    console.log('Number of files loaded from API:', uploadedFiles.length);
+                    console.log('✅ Number of files loaded from API:', uploadedFiles.length);
                     console.log('Files details:', uploadedFiles);
                     
-                    saveFilesToStorage(); // Save to localStorage
-                    updateFileDisplay();
-                    
-                    // Show notification if files were loaded
+                    // Display files if we have any
                     if (uploadedFiles.length > 0) {
+                        // Clear old localStorage file data before saving new
+                        Object.keys(localStorage).forEach(key => {
+                            if (key.startsWith('mmd_files_') || key === 'uploadedFiles') {
+                                localStorage.removeItem(key);
+                            }
+                        });
+                        
+                        saveFilesToStorage(); // Save to localStorage for this session
+                        updateFileDisplay();
+                        
+                        // Show notification for mobile files
                         showFileNotification({ size: 0 }); // Special notification for mobile files
+                        
+                        // Load imported journal notes if any PDF files exist
+                        await loadImportedJournalNotes();
+                    } else {
+                        // No files found - ensure everything is cleared
+                        uploadedFiles = [];
+                        updateFileDisplay();
+                        console.log('No files found for this transfer - clean state');
                     }
-                    
-                    // Load imported journal notes if any PDF files exist
-                    await loadImportedJournalNotes();
                 } else {
                     const errorText = await response.text();
                     console.error('Failed to load files from API, status:', response.status);
                     console.error('Error response:', errorText);
                     
-                    // Fallback to localStorage if API fails
-                    console.log('API failed, trying localStorage fallback...');
-                    const storageKey = `mmd_files_${currentTransferId}`;
-                    const filesData = localStorage.getItem(storageKey);
-                    
-                    if (filesData) {
-                        const files = JSON.parse(filesData);
-                        console.log('Loaded files from localStorage fallback:', files);
-                        uploadedFiles = files || [];
-                        console.log('Number of files loaded from localStorage:', uploadedFiles.length);
-                        
-                        saveFilesToStorage(); // Save to localStorage
-                        updateFileDisplay();
-                        
-                        // Show notification if files were loaded
-                        if (uploadedFiles.length > 0) {
-                            showFileNotification({ size: 0 }); // Special notification for mobile files
-                        }
-                        
-                        // Load imported journal notes if any PDF files exist
-                        await loadImportedJournalNotes();
-                    }
+                    // API failed - clear everything
+                    uploadedFiles = [];
+                    updateFileDisplay();
+                    console.log('API failed - cleared all data');
                 }
             } catch (error) {
                 console.error('Failed to load uploaded files from mobile app:', error);
+                // On error - clear everything
+                uploadedFiles = [];
+                updateFileDisplay();
             }
         }
 
@@ -512,21 +688,46 @@
             // We'll rely on the polling mechanism from the login page instead
             console.log('EventSource not available for cross-origin serverless apps - using polling instead');
             
+            // CRITICAL: Store initial file count to detect NEW uploads only
+            const initialFileCount = uploadedFiles.length;
+            console.log('Starting file event stream with initial file count:', initialFileCount);
+            
             // Start polling for new files every 10 seconds
             const pollForFiles = async () => {
                 try {
-                    const response = await fetch(`/api/files?transferId=${currentTransferId}`);
+                    const response = await fetch(`/api/files?transferId=${currentTransferId}`, {
+                        cache: 'no-store',
+                        headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate'
+                        }
+                    });
                     if (response.ok) {
                         const data = await response.json();
-                        const newFiles = data.files || [];
+                        const serverFiles = data.files || [];
                         
-                        // Check if we have new files
-                        if (newFiles.length > uploadedFiles.length) {
+                        // CRITICAL: Only update if we have MORE files than when we started
+                        // This ensures we only show files uploaded in THIS session
+                        if (serverFiles.length > initialFileCount) {
                             console.log('New files detected, refreshing display');
-                            uploadedFiles = newFiles;
+                            
+                            // Only get the NEW files (after initial count)
+                            const newFiles = serverFiles.slice(initialFileCount);
+                            
+                            // Show notification for each new file
+                            newFiles.forEach(file => {
+                                showFileNotification(file);
+                            });
+                            
+                            // Update with all files from server (but only new ones trigger notification)
+                            uploadedFiles = serverFiles;
                             saveFilesToStorage();
                             updateFileDisplay();
                             await loadImportedJournalNotes();
+                        } else if (serverFiles.length < uploadedFiles.length) {
+                            // Server has fewer files - reset to server state (logout cleared them)
+                            console.log('Server has fewer files - resetting to server state');
+                            uploadedFiles = serverFiles;
+                            updateFileDisplay();
                         }
                     }
                 } catch (error) {
@@ -716,36 +917,36 @@
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                background: #059669;
-                color: white;
+                background: white;
+                color: #1f2937;
                 padding: 16px 24px;
                 border-radius: 12px;
                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
                 z-index: 10000;
                 font-size: 14px;
-                max-width: 350px;
-                border-left: 4px solid #047857;
+                max-width: 500px;
+                white-space: nowrap;
+                border: 1px solid #e5e7eb;
                 animation: slideIn 0.3s ease-out;
             `;
             
             if (file.size === 0) {
                 // Special case for welcome message
                 notification.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 18px;">📱</span>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 12px; height: 12px; background: #059669; border-radius: 50%; flex-shrink: 0;"></div>
                         <div>
-                            <div style="font-weight: 600;">Mobilfiler laddade!</div>
-                            <div style="font-size: 12px; opacity: 0.9;">Filer från din mobil visas nedan</div>
+                            <div style="font-weight: 600;">Filer från patientens mobil har laddats upp</div>
                         </div>
                     </div>
                 `;
             } else {
                 notification.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 18px;">📄</span>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 12px; height: 12px; background: #059669; border-radius: 50%; flex-shrink: 0;"></div>
                         <div>
                             <div style="font-weight: 600;">Ny fil mottagen</div>
-                            <div style="font-size: 12px; opacity: 0.9;">${file.name}</div>
+                            <div style="font-size: 12px; color: #6b7280;">${file.name}</div>
                         </div>
                     </div>
                 `;
@@ -820,9 +1021,30 @@
         function clearAllFiles() {
             // Clear all saved files (for logout or manual clear)
             uploadedFiles = [];
-            localStorage.removeItem('uploadedFiles');
+            
+            // Clear ALL localStorage file data
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('mmd_files_') || key === 'uploadedFiles') {
+                    localStorage.removeItem(key);
+                    console.log('clearAllFiles cleared:', key);
+                }
+            });
+            
+            // CRITICAL: Clear the file display immediately to remove any old files (Excel, PDF, etc.)
+            const categoriesContainer = document.getElementById('file-categories');
+            if (categoriesContainer) {
+                categoriesContainer.innerHTML = '<p class="empty-category">Inga filer att visa</p>';
+            }
+            
+            // Clear journal content
+            const journalContent = document.querySelector('.journal-content');
+            if (journalContent) {
+                journalContent.innerHTML = '';
+            }
+            
             updateFileDisplay();
-            console.log('Cleared all files');
+            
+            console.log('Cleared all files and localStorage');
         }
 
 
@@ -843,26 +1065,74 @@
         }
 
 
-        function confirmLogout() {
-            console.log('confirmLogout called');
+        async function confirmLogout() {
+            console.log('LOGOUT: Resetting entire platform - deleting ALL files');
             
-            // Clear all session data
-            localStorage.removeItem('currentTransferId');
-            localStorage.removeItem('hasSeenLogin');
-            console.log('Cleared session data');
+            // STEP 1: Clear UI immediately - remove ALL files (PDF and Excel)
+            uploadedFiles = [];
+            currentTransferId = null;
             
-            // Close any active event streams
-            if (eventSource) {
-                eventSource.close();
-                console.log('Closed event source');
+            const categoriesContainer = document.getElementById('file-categories');
+            if (categoriesContainer) {
+                categoriesContainer.innerHTML = '<p class="empty-category">Inga filer att visa</p>';
             }
             
-            // Hide overlay first
+            const journalContent = document.querySelector('.journal-content');
+            if (journalContent) {
+                journalContent.innerHTML = '';
+            }
+            
+            updateFileDisplay();
+            clearAllFiles();
+            
+            // STEP 2: Delete ALL files from server FIRST
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (response.ok) {
+                    console.log('✅ Server deleted ALL files and transfers');
+                } else {
+                    console.error('Failed to delete server files');
+                }
+            } catch (error) {
+                console.error('Error deleting server files:', error);
+            }
+            
+            // STEP 3: Wait for server to complete deletion
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // STEP 4: Clear ALL localStorage - EVERYTHING related to files
+            const allKeys = Object.keys(localStorage);
+            allKeys.forEach(key => {
+                if (key.startsWith('mmd_files_') || 
+                    key.startsWith('transfer_') || 
+                    key.startsWith('patient_transfer_') ||
+                    key === 'currentTransferId' ||
+                    key === 'currentPatientName' ||
+                    key === 'uploadedFiles' ||
+                    key === 'sessionStartTime') {
+                    localStorage.removeItem(key);
+                    console.log('Deleted:', key);
+                }
+            });
+            
+            // Clear auth (but keep for login)
+            localStorage.removeItem('hasSeenLogin');
+            localStorage.removeItem('mmdcare_auth');
+            
+            console.log('✅ Platform completely reset - all files deleted');
+            
+            // Close event streams
+            if (eventSource) {
+                eventSource.close();
+            }
+            
             hideLogoutOverlay();
             
-            // Redirect to login page
-            console.log('Redirecting to index.html');
-            window.location.href = 'index.html';
+            // Redirect to login
+            window.location.href = 'login.html';
         }
 
     </script>

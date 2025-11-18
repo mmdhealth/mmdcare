@@ -1,6 +1,7 @@
 {
   "name": "mmdconnect-desktop",
   "version": "1.0.0",
+  "type": "module",
   "description": "MMDConnect Desktop Application with Mobile Upload",
   "main": "index.html",
   "scripts": {
@@ -10,8 +11,13 @@
   },
   "dependencies": {
     "@vercel/blob": "^2.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
     "formidable": "^3.5.1",
+    "multer": "^1.4.5-lts.1",
     "pdf-parse": "^1.1.1",
+    "qrcode": "^1.5.3",
+    "uuid": "^9.0.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

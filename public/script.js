@@ -198,7 +198,7 @@ function handleLogoutEscapeKey(e) {
         }
 }
 
-function confirmLogout() {
+async function confirmLogout() {
         const button = document.querySelector('.logout-btn-confirm');
         const originalText = button.textContent;
         
@@ -206,10 +206,51 @@ function confirmLogout() {
         button.textContent = 'Loggar ut...';
         button.disabled = true;
         
+        // Clear all transfers on the server
+        try {
+            const response = await fetch('/api/logout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (response.ok) {
+                console.log('Server transfers cleared');
+            } else {
+                console.error('Failed to clear server transfers');
+            }
+        } catch (error) {
+            console.error('Error clearing server transfers:', error);
+        }
+        
+        // Clear all session and patient data
+        localStorage.removeItem('currentTransferId');
+        localStorage.removeItem('currentPatientName');
+        localStorage.removeItem('hasSeenLogin');
+        localStorage.removeItem('mmdcare_auth');
+        localStorage.removeItem('uploadedFiles');
+        
+        // Clear all patient transfer mappings
+        const patientIds = ['anders-boman', 'markus-selin', 'samuel-oldmark'];
+        patientIds.forEach(patientId => {
+            const transferId = localStorage.getItem(`patient_transfer_${patientId}`);
+            if (transferId) {
+                localStorage.removeItem(`transfer_patient_${transferId}`);
+                localStorage.removeItem(`patient_transfer_${patientId}`);
+                localStorage.removeItem(`mmd_files_${transferId}`);
+            }
+        });
+        
+        // Clear any remaining transfer-related data
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('mmd_files_') || 
+                key.startsWith('transfer_patient_') || 
+                key.startsWith('patient_transfer_')) {
+                localStorage.removeItem(key);
+            }
+        });
+        
         // Simulate logout process
         setTimeout(() => {
-            localStorage.removeItem('hasSeenLogin');
-            window.location.href = 'index.html';
+            window.location.href = 'login.html';
         }, 1000);
 }
 
