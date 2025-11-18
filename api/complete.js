@@ -31,11 +31,12 @@ export default async function handler(req, res) {
     const transfer = await loadTransferFromBlob(transferId);
     console.log('Found transfer:', transfer);
     
+    const files = transfer?.files || [];
     const closed = transfer && transfer.status === 'closed';
     const status = closed ? 'closed' : 'open';
-    console.log('Returning status:', status);
+    console.log('Returning status:', status, 'files:', files.length);
     
-    return res.status(200).json({ status });
+    return res.status(200).json({ status, files });
   }
 
   if (req.method === 'POST') {
