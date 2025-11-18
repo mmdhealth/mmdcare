@@ -727,8 +727,8 @@
                 }
             };
             
-            // Poll every 2 seconds for faster response
-            pollIntervalId = setInterval(poll, 2000);
+            // Poll ~2x per second for faster detection
+            pollIntervalId = setInterval(poll, 800);
             poll(); // Initial poll
         }
 
