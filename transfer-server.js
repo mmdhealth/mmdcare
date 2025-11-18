@@ -31,6 +31,38 @@ const deleteLocalTransferFiles = (transferId) => {
   }
 };
 
+const deleteTransferData = (transferId) => {
+  if (!transferId) return;
+  const transfer = transfers.get(transferId);
+  if (transfer && hasBlobAccess && Array.isArray(transfer.files)) {
+    transfer.files.forEach(file => {
+      if (file?.blobKey) {
+        del(file.blobKey).catch(err => {
+          console.error(`Failed to delete blob ${file.blobKey}:`, err);
+        });
+      }
+    });
+    const metadataKey = `transfers/${transferId}.json`;
+    del(metadataKey).catch(err => {
+      if (err.message && !err.message.includes('not found')) {
+        console.error(`Failed to delete transfer metadata ${metadataKey}:`, err);
+      }
+    });
+  }
+  deleteLocalTransferFiles(transferId);
+  transfers.delete(transferId);
+};
+
+const removeTransferForPatient = (patientId) => {
+  if (!patientId) return;
+  const oldTransferId = patientTransfers.get(patientId);
+  if (oldTransferId) {
+    console.log('Cleaning up previous transfer for patient:', patientId, oldTransferId);
+    deleteTransferData(oldTransferId);
+    patientTransfers.delete(patientId);
+  }
+};
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -213,45 +245,26 @@ app.post("/transfers", (req, res) => {
 app.get("/api/transfers", (req, res) => {
   const { patientId } = req.query;
   
-  if (patientId) {
-    // Check if a transfer already exists for this patient
-    const existingTransferId = patientTransfers.get(patientId);
-    
-    if (existingTransferId) {
-      // Return the existing transfer ID
-      const existingTransfer = transfers.get(existingTransferId);
-      if (existingTransfer) {
-        console.log('Returning existing transfer ID for patient (GET):', patientId, existingTransferId);
-        return res.status(200).json({ 
-          transferId: existingTransferId, 
-          patientId, 
-          sessionId: existingTransfer.sessionId,
-          existing: true
-        });
-      } else {
-        // Transfer was deleted, create a new one
-        console.log('Existing transfer ID found but transfer deleted, creating new one');
-      }
-    }
-    
-    // No existing transfer, create a new one
-    const newId = uuid();
-    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Create new transfer with session ID
-    transfers.set(newId, { 
-      status: "open", 
-      files: [], 
-      createdAt: Date.now(), 
-      patientId: patientId,
-      sessionId: sessionId
-    });
-    patientTransfers.set(patientId, newId);
-    console.log('Created NEW transfer ID for patient (GET):', patientId, newId, 'Session:', sessionId);
-    return res.status(200).json({ transferId: newId, patientId, sessionId, existing: false });
-  } else {
+  if (!patientId) {
     return res.status(400).json({ error: 'patientId parameter required' });
   }
+
+  // Always clear any existing transfer for this patient to mimic stateless serverless behavior
+  removeTransferForPatient(patientId);
+  
+  const newId = uuid();
+  const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  transfers.set(newId, { 
+    status: "open", 
+    files: [], 
+    createdAt: Date.now(), 
+    patientId: patientId,
+    sessionId: sessionId
+  });
+  patientTransfers.set(patientId, newId);
+  console.log('Created NEW transfer ID for patient (GET):', patientId, newId, 'Session:', sessionId);
+  return res.status(200).json({ transferId: newId, patientId, sessionId, existing: false });
 });
 
 app.post("/api/transfers", (req, res) => {
@@ -273,38 +286,7 @@ app.post("/api/transfers", (req, res) => {
   
   // If patientId provided, ALWAYS update the mapping (even if it existed)
   if (patientId) {
-    // CRITICAL: Delete any old transfer for this patient first
-    // This ensures old files (PDF and Excel) are completely removed
-    const oldTransferId = patientTransfers.get(patientId);
-    if (oldTransferId && oldTransferId !== id) {
-      console.log('Deleting old transfer and files for patient:', patientId, oldTransferId);
-      const oldTransfer = transfers.get(oldTransferId);
-      if (oldTransfer) {
-        if (hasBlobAccess && Array.isArray(oldTransfer.files)) {
-          oldTransfer.files.forEach(file => {
-            if (file?.blobKey) {
-              del(file.blobKey).catch(err => {
-                console.error(`Failed to delete blob ${file.blobKey}:`, err);
-              });
-            }
-          });
-        }
-        if (hasBlobAccess) {
-          const metadataKey = `transfers/${oldTransferId}.json`;
-          del(metadataKey).catch(err => {
-            if (err.message && !err.message.includes('not found')) {
-              console.error(`Failed to delete transfer metadata ${metadataKey}:`, err);
-            }
-          });
-        }
-        deleteLocalTransferFiles(oldTransferId);
-        // Delete all files from old transfer
-        oldTransfer.files = [];
-      }
-      // Delete the old transfer completely
-      transfers.delete(oldTransferId);
-      console.log('Removed old transfer mapping for patient:', patientId, oldTransferId);
-    }
+    removeTransferForPatient(patientId);
     patientTransfers.set(patientId, id);
     console.log('Created NEW transfer ID for patient:', patientId, id, 'Session:', sessionId);
   }
