@@ -5,7 +5,18 @@ import { put, head } from '@vercel/blob';
 
 const buildKey = (transferId) => `transfers/${transferId}.json`;
 
+const hasBlobAccess = () => {
+  return Boolean(
+    process.env.BLOB_READ_WRITE_TOKEN ||
+    process.env.BLOB_API_URL ||
+    process.env.VERCEL
+  );
+};
+
 export async function loadTransferFromBlob(transferId) {
+  if (!hasBlobAccess()) {
+    return null;
+  }
   const key = buildKey(transferId);
   try {
     const meta = await head(key);
@@ -20,6 +31,9 @@ export async function loadTransferFromBlob(transferId) {
 }
 
 export async function saveTransferToBlob(transferId, transfer) {
+  if (!hasBlobAccess()) {
+    return;
+  }
   const key = buildKey(transferId);
   await put(key, JSON.stringify(transfer, null, 2), {
     contentType: 'application/json',

@@ -78,14 +78,19 @@ export default async function handler(req, res) {
       console.log('Blob key:', fileBlobKey);
       console.log('MIME type:', file.mimetype);
       
-      const blobResult = await put(fileBlobKey, fileContent, {
-        contentType: file.mimetype,
-        access: 'public',
-        allowOverwrite: true,
-      });
-      
-      console.log('File stored in Blob storage successfully:', fileBlobKey);
-      console.log('Blob URL:', blobResult.url);
+      let blobUrl = null;
+      try {
+        const blobResult = await put(fileBlobKey, fileContent, {
+          contentType: file.mimetype,
+          access: 'public',
+          allowOverwrite: true,
+        });
+        blobUrl = blobResult.url;
+        console.log('File stored in Blob storage successfully:', fileBlobKey);
+        console.log('Blob URL:', blobUrl);
+      } catch (blobError) {
+        console.warn('Blob storage unavailable, keeping file metadata without URL:', blobError?.message);
+      }
 
       // Store file metadata
       const meta = {
@@ -93,7 +98,9 @@ export default async function handler(req, res) {
         size: file.size,
         mimetype: file.mimetype,
         uploadedAt: new Date().toISOString(),
-        transferId: transferId
+        transferId: transferId,
+        url: blobUrl,
+        blobKey: blobUrl ? fileBlobKey : null
       };
       
       // Add file to transfer and persist
