@@ -185,6 +185,20 @@
     </div>
 
     <script>
+        const params = new URLSearchParams(window.location.search);
+        const forceDesktop = params.get('device') === 'desktop';
+
+        if (!forceDesktop && isMobileDevice()) {
+            window.location.replace('mobile-upload.html');
+        }
+
+        function isMobileDevice() {
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            const isTouch = navigator.maxTouchPoints > 0;
+            const narrowViewport = window.matchMedia('(max-width: 900px)').matches;
+            return /android|iphone|ipad|ipod|mobile/i.test(userAgent) || (isTouch && narrowViewport);
+        }
+
         function setStatus(message, type) {
             const statusEl = document.getElementById('status');
             statusEl.textContent = message;
