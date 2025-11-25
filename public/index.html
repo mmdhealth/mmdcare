@@ -343,6 +343,24 @@
             }
         }
     </style>
+    <script>
+        // Mobile detection - redirect before page loads
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const forceDesktop = params.get('device') === 'desktop';
+            
+            if (!forceDesktop) {
+                const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+                const isTouch = navigator.maxTouchPoints > 0;
+                const narrowViewport = window.matchMedia('(max-width: 900px)').matches;
+                const isMobile = /android|iphone|ipad|ipod|mobile/i.test(userAgent) || (isTouch && narrowViewport);
+                
+                if (isMobile) {
+                    window.location.replace('mobile-upload.html');
+                }
+            }
+        })();
+    </script>
 </head>
 <body>
     <div class="page-shell">
