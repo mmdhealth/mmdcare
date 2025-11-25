@@ -1,0 +1,84 @@
+import { getSessionByCode, updateSessionStage, updateDoctorVerification, SESSION_TTL_MS } from '../sessionStore.js';
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Cache-Control', 'no-store');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  // Get the slug (sub-route) from the request
+  const slug = req.query.slug || [];
+  const action = Array.isArray(slug) ? slug[0] : slug;
+
+  // GET /api/session-code?code=... (no slug)
+  if (req.method === 'GET' && !action) {
+    const { code } = req.query || {};
+    if (!code) {
+      res.status(400).json({ error: 'code query parameter required' });
+      return;
+    }
+
+    const session = await getSessionByCode(code);
+    if (!session) {
+      res.status(404).json({ error: 'Koden hittades inte eller har gått ut.' });
+      return;
+    }
+
+    const ttlMs = Math.max(0, SESSION_TTL_MS - (Date.now() - Number(session.createdAt || 0)));
+    res.status(200).json({
+      ...session,
+      expiresInSec: Math.floor(ttlMs / 1000)
+    });
+    return;
+  }
+
+  // POST /api/session-code/stage
+  if (req.method === 'POST' && action === 'stage') {
+    try {
+      const { code, stage } = req.body || {};
+      if (!code || !stage) {
+        res.status(400).json({ error: 'Code and stage are required.' });
+        return;
+      }
+      const updated = await updateSessionStage(code, stage);
+      if (!updated) {
+        res.status(404).json({ error: 'Koden hittades inte eller har gått ut.' });
+        return;
+      }
+      res.status(200).json({ success: true, stage: updated.stage });
+    } catch (error) {
+      console.error('Failed to update session stage:', error);
+      res.status(500).json({ error: 'Failed to update session stage' });
+    }
+    return;
+  }
+
+  // POST /api/session-code/doctor
+  if (req.method === 'POST' && action === 'doctor') {
+    try {
+      const { code, verified } = req.body || {};
+      if (!code) {
+        res.status(400).json({ error: 'Code is required.' });
+        return;
+      }
+      const updated = await updateDoctorVerification(code, verified !== false);
+      if (!updated) {
+        res.status(404).json({ error: 'Koden hittades inte eller har gått ut.' });
+        return;
+      }
+      res.status(200).json({ success: true, doctorVerified: updated.doctorVerified });
+    } catch (error) {
+      console.error('Failed to update doctor verification:', error);
+      res.status(500).json({ error: 'Failed to update doctor verification' });
+    }
+    return;
+  }
+
+  res.status(404).json({ error: 'Not found' });
+}
+
