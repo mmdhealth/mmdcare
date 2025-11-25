@@ -5,7 +5,7 @@ import { put, head, del } from '@vercel/blob';
 
 const buildKey = (transferId) => `transfers/${transferId}.json`;
 
-const hasBlobAccess = () => {
+export const hasBlobAccess = () => {
   return Boolean(
     process.env.BLOB_READ_WRITE_TOKEN ||
     process.env.BLOB_API_URL ||

@@ -1,5 +1,6 @@
 // Local API endpoint for creating new transfers
 import { loadTransferFromBlob, saveTransferToBlob, createEmptyTransfer, deleteTransferFromBlob, deletePatientTransferMapping } from './blobStore.js';
+import { registerSession, removeSessionForTransfer, SESSION_TTL_MS } from './sessionStore.js';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -62,7 +63,11 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     console.log('=== LOCAL TRANSFERS POST REQUEST ===');
     
-    const { patientId } = req.body || {};
+    const {
+      patientId,
+      patientAlias = 'Patient',
+      doctorName = 'Dr. Anna Andersson'
+    } = req.body || {};
     
     // If patientId is provided, check if a transfer already exists for this patient
     if (patientId) {
@@ -88,6 +93,7 @@ export default async function handler(req, res) {
         global.__patient_transfers.delete(patientId);
         await deleteTransferFromBlob(existingTransferId);
         await deletePatientTransferMapping(patientId);
+        await removeSessionForTransfer(existingTransferId);
       }
     }
     
@@ -100,7 +106,12 @@ export default async function handler(req, res) {
       status: 'open',
       files: [],
       createdAt: Date.now(),
-      patientId: patientId || null
+      patientId: patientId || null,
+      patientAlias,
+      doctorName,
+      sessionStage: 'waiting',
+      doctorVerified: false,
+      patientVerified: false
     };
     
     // Store transfer
@@ -119,7 +130,16 @@ export default async function handler(req, res) {
     
     console.log('Created new transfer:', transfer);
     
-    res.status(200).json({ transferId, patientId });
+    const session = await registerSession({ transferId, patientAlias, doctorName });
+    
+    res.status(201).json({
+      transferId,
+      patientId,
+      patientAlias: session.patientAlias,
+      doctorName: session.doctorName,
+      sessionCode: session.code,
+      expiresInSec: Math.floor(SESSION_TTL_MS / 1000)
+    });
   } else {
     res.status(405).json({ error: 'Method not allowed' });
   }

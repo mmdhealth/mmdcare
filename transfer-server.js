@@ -1228,17 +1228,34 @@ app.get("/api/excel-content", async (req, res) => {
 });
 
 // 7) Cancel transfer
-app.post("/cancel/:transferId", (req, res) => {
-  const { transferId } = req.params;
+function cancelTransfer(transferId, res) {
   const t = transfers.get(transferId);
-  if (!t) return res.status(404).json({ error: "Transfer not found" });
-  
+  if (!t) {
+    if (res) {
+      return res.status(404).json({ error: "Transfer not found" });
+    }
+    return;
+  }
   t.status = "cancelled";
   removeSessionCodeForTransfer(transferId);
   broadcast(transferId, { type: "status", status: "cancelled" });
   broadcast(transferId, { type: "cancelled" });
   endStream(transferId);
-  res.sendStatus(204);
+  if (res) {
+    res.sendStatus(204);
+  }
+}
+
+app.post("/cancel/:transferId", (req, res) => {
+  cancelTransfer(req.params.transferId, res);
+});
+
+app.post("/api/cancel", (req, res) => {
+  const { transferId } = req.query;
+  if (!transferId) {
+    return res.status(400).json({ error: "transferId required" });
+  }
+  cancelTransfer(transferId, res);
 });
 
 // 8) Delete all files for a transfer

@@ -57,6 +57,7 @@ export default async function handler(req, res) {
       }
       transfer.status = 'closed';
       await saveTransferToBlob(transferId, transfer);
+      global.__mmd_transfers.set(transferId, transfer);
       console.log('Updated transfer status to closed for:', transferId);
       console.log('Final transfer object:', transfer);
 

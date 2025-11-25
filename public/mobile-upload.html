@@ -871,7 +871,8 @@
                 selectors.endSessionButton.textContent = 'Avslutar...';
             }
             try {
-                await fetch(`/cancel/${state.transferId}`, { method: 'POST' });
+                const params = new URLSearchParams({ transferId: state.transferId });
+                await fetch(`/api/cancel?${params.toString()}`, { method: 'POST' });
             } catch (error) {
                 console.error('Failed to end session:', error);
             } finally {

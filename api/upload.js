@@ -106,6 +106,7 @@ export default async function handler(req, res) {
       // Add file to transfer and persist
       transfer.files.push(meta);
       await saveTransferToBlob(transferId, transfer);
+      global.__mmd_transfers.set(transferId, transfer);
       
       console.log('File uploaded successfully:', meta);
       console.log('Transfer now has', transfer.files.length, 'files');
