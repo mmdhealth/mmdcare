@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Provsvar - MMDCare Platform</title>
+    <title>Data - MMDCare Platform</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -59,38 +59,41 @@
                 <div class="patient-info">
                     <h1>Patient: <span data-patient-name="full">Anders Boman</span></h1>
                     <div class="organ-title-header">
-                        <h2>Provsvar</h2>
-                        <p class="organ-subtitle">Laboratorieresultat och analyser</p>
+                        <h2>Data</h2>
+                        <p class="organ-subtitle">Laboratorieresultat och data från bärbara enheter</p>
                     </div>
                 </div>
                 <div class="user-info">
-                    <span class="user-name">Dr. Anna Andersson</span>
+                    <div class="user-meta">
+                        <span class="user-name">Dr. Anna Andersson</span>
+                        <span class="user-title">Kardiologist</span>
+                    </div>
                     <div class="user-avatar">AA</div>
                 </div>
             </div>
 
-            <!-- Back Button and Summarize Button -->
-            <div class="back-button-container" style="display: flex; justify-content: space-between; align-items: center;">
-                <button class="back-button" onclick="window.location.href='dashboard.html'">
-                    ← Tillbaka till översikt
-                </button>
-                <button class="summarize-button" onclick="summarizeHeartData()">
-                    <img src="Assets/halsa-gpt.png" alt="Hälsa+GPT" class="button-icon">
-                    Analysera med Hälsa+GPT
-                </button>
+            <div class="organ-actions">
+                <div class="action-buttons">
+                    <button class="back-button" onclick="window.location.href='dashboard.html'">
+                        ← Tillbaka till översikt
+                    </button>
+                    <button class="summarize-button" onclick="summarizeHeartData()">
+                        <img src="Assets/halsa-gpt.png" alt="Hälsa+GPT" class="button-icon">
+                        Analysera med Hälsa+GPT
+                    </button>
+                </div>
             </div>
 
-            <!-- Main Provsvar Container -->
-            <div class="file-category-expandable" id="provsvar-container">
+            <!-- Main Data Container -->
+            <div class="file-category-expandable card-animate" id="provsvar-container">
                 <button class="category-header" onclick="toggleProvsvar()">
                     <div class="category-title-row">
-                        <div class="category-title">Provsvar</div>
+                        <div class="category-title">Data</div>
                         <div class="category-count" id="provsvar-count">0 provsvar</div>
                     </div>
                     <div class="chevron" id="provsvar-chevron">›</div>
                 </button>
                 <div class="file-list-vertical" id="provsvar-content" style="display: none;">
-                    <!-- Dynamic Health Metrics Cards -->
                     <div class="metrics-grid" id="dynamic-metrics-container">
                         <!-- Cards will be dynamically created here based on Excel data -->
                     </div>
@@ -99,7 +102,7 @@
 
         </main>
     </div>
-    <script src="script.js"></script>
+    <script src="script.js?v=20250105"></script>
     <script>
         function logout() {
             showLogoutOverlay();
@@ -164,9 +167,6 @@
         async function loadExcelData() {
             console.log('=== LOADING EXCEL DATA ===');
             
-            // Show loading state
-            showLoadingState();
-            
             try {
                 // Get current transfer ID from the dashboard
                 const transferId = localStorage.getItem('currentTransferId');
@@ -184,7 +184,10 @@
                 const filesResponse = await fetch(`/api/files?transferId=${transferId}`);
                 
                 if (!filesResponse.ok) {
-                    console.log('Failed to fetch files from transfer, using mock data');
+                    console.log('Failed to fetch files from transfer, falling back to cached files');
+                    if (await loadExcelDataFromCache()) {
+                        return;
+                    }
                     showEmptyState();
                     return;
                 }
@@ -201,7 +204,10 @@
                 );
                 
                 if (excelFiles.length === 0) {
-                    console.log('No Excel files found in transfer, using mock data');
+                    console.log('No Excel files found on server, looking in cached uploads');
+                    if (await loadExcelDataFromCache()) {
+                        return;
+                    }
                     showEmptyState();
                     return;
                 }
@@ -210,6 +216,17 @@
                 const excelFile = excelFiles[0];
                 console.log('Loading Excel data from file:', excelFile.name);
                 console.log('API URL:', `/api/excel-content?transferId=${transferId}&filename=${encodeURIComponent(excelFile.name)}`);
+                
+                const cacheKey = getExcelCacheKey(transferId, excelFile.name);
+                const cachedExcel = getCachedExcelData(cacheKey, excelFile.uploadedAt);
+                if (cachedExcel) {
+                    console.log('Using cached Excel data');
+                    updateUIWithExcelData(cachedExcel);
+                    return;
+                }
+                
+                // Show loading state only if we need to fetch fresh data
+                showLoadingState();
                 
                 // Fetch Excel data from API with cache busting
                 const response = await fetch(`/api/excel-content?transferId=${transferId}&filename=${encodeURIComponent(excelFile.name)}&t=${Date.now()}`);
@@ -227,6 +244,7 @@
                 
                 const excelData = await response.json();
                 console.log('Excel data loaded successfully:', JSON.stringify(excelData, null, 2));
+                setCachedExcelData(cacheKey, excelFile.uploadedAt, excelData);
                 
                 // Update UI with Excel data
                 updateUIWithExcelData(excelData);
@@ -234,6 +252,9 @@
             } catch (error) {
                 console.error('Error loading Excel data:', error);
                 console.error('Error stack:', error.stack);
+                if (await loadExcelDataFromCache()) {
+                    return;
+                }
                 showEmptyState();
             }
         }
@@ -250,8 +271,7 @@
                 showEmptyState();
             }
             
-            // Skip chart initialization since we removed all static charts
-            console.log('Skipping chart initialization - no static charts remain');
+            initializeChartsWithData(excelData.heartData);
         }
         
         function createDynamicCardsFromExcelData(rawData, dynamicData) {
@@ -293,18 +313,20 @@
             
             console.log(`Processing ${rawData.length} raw data items`);
             
-            // Create a card for each item in rawData, but filter out unwanted items
+            // Create a card for each item in rawData that we can match to a value
             let cardsCreated = 0;
             const unwantedPatterns = [
-                'datum', 'date', 'tid', 'time', 'kl', 'klockan',
-                '<', '>', '≤', '≥', 'under', 'över', 'mindre', 'mer',
-                'normal', 'referens', 'ref', 'range', 'intervall',
-                'enhet', 'unit', 'värde', 'value', 'resultat', 'result'
+                'datum', 'date', 'tid', 'time', 'timestamp', 'kl ', 'klock'
             ];
+            const timePattern = /^([01]?\d|2[0-3])[:.][0-5]\d(?:[:.][0-5]\d)?$/;
+            const isoTimePattern = /^\d{4}-\d{2}-\d{2}[ T]([01]?\d|2[0-3])[:.][0-5]\d/;
+            const valueLookup = buildDynamicValueLookup(dynamicData);
+            const renderedKeys = new Set();
             
             rawData.forEach((item, index) => {
                 if (item && typeof item === 'string' && item.trim() !== '') {
-                    const trimmed = item.trim().toLowerCase();
+                    const trimmedOriginal = item.trim();
+                    const trimmed = trimmedOriginal.toLowerCase();
                     
                     // Skip unwanted patterns
                     let shouldSkip = false;
@@ -320,20 +342,36 @@
                         shouldSkip = true;
                     }
                     
+                    if (timePattern.test(trimmed) || isoTimePattern.test(trimmed)) {
+                        shouldSkip = true;
+                    }
+                    
                     // Skip items that are too short
                     if (trimmed.length < 3) {
                         shouldSkip = true;
                     }
                     
-                    if (!shouldSkip) {
-                        console.log(`Creating card ${index + 1}/${rawData.length}: ${item}`);
-                        const value = dynamicData && dynamicData[item] ? dynamicData[item] : null;
-                        console.log(`Value for ${item}:`, value);
-                        createDynamicCard(item, value);
-                        cardsCreated++;
-                    } else {
-                        console.log(`Skipping unwanted item: ${item}`);
+                    // Skip duplicates
+                    if (renderedKeys.has(trimmed)) {
+                        shouldSkip = true;
                     }
+                    
+                    if (shouldSkip) {
+                        console.log(`Skipping unwanted item: ${item}`);
+                        return;
+                    }
+                    
+                    const value = resolveDynamicValue(trimmedOriginal, valueLookup);
+                    if (value === null) {
+                        console.log(`No dynamic value found for ${item}, skipping`);
+                        return;
+                    }
+                    
+                    console.log(`Creating card ${index + 1}/${rawData.length}: ${item}`);
+                    console.log(`Value for ${item}:`, value);
+                    createDynamicCard(trimmedOriginal, value);
+                    renderedKeys.add(trimmed);
+                    cardsCreated++;
                 }
             });
             
@@ -380,6 +418,30 @@
             
             // Log the actual DOM structure
             console.log('Container HTML:', metricsContainer.innerHTML.substring(0, 200) + '...');
+        }
+        
+        function buildDynamicValueLookup(dynamicData = {}) {
+            const lookup = new Map();
+            Object.entries(dynamicData).forEach(([key, value]) => {
+                if (typeof key !== 'string') return;
+                const trimmed = key.trim();
+                if (!trimmed) return;
+                lookup.set(key, value);
+                lookup.set(trimmed, value);
+                lookup.set(trimmed.toLowerCase(), value);
+            });
+            return lookup;
+        }
+        
+        function resolveDynamicValue(label, lookup) {
+            if (!label || !lookup) return null;
+            const trimmed = label.trim();
+            if (!trimmed) return null;
+            const lower = trimmed.toLowerCase();
+            if (lookup.has(label)) return lookup.get(label);
+            if (lookup.has(trimmed)) return lookup.get(trimmed);
+            if (lookup.has(lower)) return lookup.get(lower);
+            return null;
         }
         
         function createDynamicCard(title, value) {
@@ -459,13 +521,10 @@
             cleanTitle = cleanTitle.replace(/\s*\([^)]*\)/g, '').trim();
             
             // Determine status based on value
-            let status = 'Normal';
-            let statusColor = '#10b981'; // Green
-            
-            if (value === null || value === undefined) {
-                status = 'Ingen data tillgänglig';
-                statusColor = '#9ca3af'; // Gray
-            }
+            const formattedValue = formatMetricValue(value);
+            const hasValue = formattedValue !== '-';
+            let status = hasValue ? 'Importerad' : 'Ingen data tillgänglig';
+            let statusColor = hasValue ? '#10b981' : '#9ca3af';
             
             // Create left section (title) - left aligned, no line breaks
             const leftSection = document.createElement('div');
@@ -488,7 +547,7 @@
             
             const valueEl = document.createElement('div');
             valueEl.className = 'metric-value';
-            valueEl.textContent = value || '-';
+            valueEl.textContent = formattedValue;
             valueEl.style.cssText = 'font-size: 16px !important; font-weight: 700 !important; color: #333 !important; margin: 0 !important; display: inline !important; visibility: visible !important; line-height: 1.1 !important;';
             
             const unitEl = document.createElement('div');
@@ -528,6 +587,20 @@
             // Check if the card is actually visible
             const rect = card.getBoundingClientRect();
             console.log(`Card visibility check: width=${rect.width}, height=${rect.height}, visible=${rect.width > 0 && rect.height > 0}`);
+        }
+        
+        function formatMetricValue(rawValue) {
+            if (rawValue === null || typeof rawValue === 'undefined' || rawValue === '') {
+                return '-';
+            }
+            if (typeof rawValue === 'number') {
+                return Number.isInteger(rawValue) ? rawValue.toString() : rawValue.toFixed(1);
+            }
+            const numeric = parseFloat(rawValue);
+            if (!Number.isNaN(numeric) && Number.isFinite(numeric)) {
+                return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(1);
+            }
+            return String(rawValue);
         }
         
         function showLoadingState() {
@@ -915,6 +988,34 @@
         });
         }
 
+        function getExcelCacheKey(transferId, filename) {
+            return `excel_cache_${transferId}_${filename}`;
+        }
+
+        function getCachedExcelData(cacheKey, uploadedAt) {
+            try {
+                const cached = localStorage.getItem(cacheKey);
+                if (!cached) return null;
+                const parsed = JSON.parse(cached);
+                if (!parsed || !parsed.data) return null;
+                if (uploadedAt && parsed.uploadedAt && parsed.uploadedAt !== uploadedAt) {
+                    return null;
+                }
+                return parsed.data;
+            } catch (e) {
+                console.warn('Failed to parse cached Excel data', e);
+                return null;
+            }
+        }
+
+        function setCachedExcelData(cacheKey, uploadedAt, data) {
+            try {
+                localStorage.setItem(cacheKey, JSON.stringify({ uploadedAt, data }));
+            } catch (e) {
+                console.warn('Failed to cache Excel data', e);
+            }
+        }
+
         // Summarize heart data with GPT
         function summarizeHeartData() {
             const button = document.querySelector('.summarize-button');
@@ -952,8 +1053,8 @@
             // Collect heart data with actual Excel data
             const patientName = getStoredPatientName();
             const heartData = {
-                title: `Provsvar - ${patientName}`,
-                content: `# Provsvarsanalys för ${patientName}
+                title: `Data - ${patientName}`,
+                content: `# Dataanalys för ${patientName}
 
 ### Datum
 ${todayString}
@@ -971,7 +1072,7 @@ ${todayString}
 - **Hjärtfrekvensvariabilitet:** Inom normala gränser
 
 ### Sammanfattning
-Patientens provsvar visar optimala värden med inga avvikelser. Alla parametrar är inom normala gränser och indikerar god hälsa.
+Patientens data visar optimala värden med inga avvikelser. Alla parametrar är inom normala gränser och indikerar god hälsa.
 
 ---
 *Denna analys har genererats av Hälsa+GPT baserat på aktuella provsvar.*`,
@@ -993,14 +1094,69 @@ Patientens provsvar visar optimala värden med inga avvikelser. Alla parametrar 
             }, 1500);
         }
 
+        async function loadExcelDataFromCache() {
+            try {
+                const cachedFiles = getLocalExcelFiles();
+                if (!cachedFiles.length) {
+                    console.log('No cached Excel files available');
+                    return false;
+                }
+                const transferId = localStorage.getItem('currentTransferId');
+                for (const file of cachedFiles) {
+                    if (!file?.name) continue;
+                    const cacheKey = getExcelCacheKey(transferId || 'local', file.name);
+                    const cachedData = getCachedExcelData(cacheKey, file.uploadedAt);
+                    if (cachedData) {
+                        console.log('Loaded Excel data from cache for file:', file.name);
+                        updateUIWithExcelData(cachedData);
+                        return true;
+                    }
+                }
+                console.log('No cached Excel data found for stored files');
+                return false;
+            } catch (error) {
+                console.warn('Failed to load Excel data from cache:', error);
+                return false;
+            }
+        }
+
+        function getLocalExcelFiles() {
+            try {
+                const stored = localStorage.getItem('uploadedFiles');
+                if (!stored) return [];
+                const files = JSON.parse(stored);
+                if (!Array.isArray(files)) return [];
+                return files.filter(file =>
+                    file &&
+                    typeof file.name === 'string' &&
+                    (
+                        file.name.toLowerCase().endsWith('.xlsx') ||
+                        file.name.toLowerCase().endsWith('.xls') ||
+                        file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                        file.mimetype === 'application/vnd.ms-excel'
+                    )
+                );
+            } catch (error) {
+                console.warn('Failed to read cached uploaded files:', error);
+                return [];
+            }
+        }
+
         // Trigger heart page animations
         document.addEventListener('DOMContentLoaded', function() {
-            // Animate metric cards first
+            const primaryCards = document.querySelectorAll('.file-category-expandable.card-animate');
+            primaryCards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.classList.add('loaded');
+                }, 50 + (index * 50));
+            });
+
+            // Animate metric cards
             const metricCards = document.querySelectorAll('.metric-card.card-animate');
             metricCards.forEach((card, index) => {
                 setTimeout(() => {
                     card.classList.add('loaded');
-                }, 100 + (index * 50));
+                }, 150 + (index * 50));
             });
             
             // Animate chart cards after metric cards
@@ -1008,9 +1164,8 @@ Patientens provsvar visar optimala värden med inga avvikelser. Alla parametrar 
             chartCards.forEach((card, index) => {
                 setTimeout(() => {
                     card.classList.add('loaded');
-                }, 300 + (index * 50));
+                }, 350 + (index * 50));
             });
-            
         });
     </script>
 </body>

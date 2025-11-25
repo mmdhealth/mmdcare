@@ -25,8 +25,10 @@ function applyPatientNameLabels() {
 
 window.getStoredPatientName = getStoredPatientName;
 window.getStoredPatientFirstName = getStoredPatientFirstName;
+let globalSessionTimerIntervalId = null;
 
 document.addEventListener('DOMContentLoaded', applyPatientNameLabels);
+document.addEventListener('DOMContentLoaded', initSessionTimerToast);
 
 // Mobile menu functionality
 document.addEventListener('DOMContentLoaded', function() {
@@ -178,14 +180,13 @@ function showLogoutOverlay() {
         modal.innerHTML = `
             <div class="logout-modal-content">
                 <div class="logout-info-card">
-                    <h4 class="logout-info-title">Logga ut</h4>
-                    <p class="logout-info-text">Är du säker på att du vill logga ut från MMDCare?</p>
-                    <p class="logout-info-text" style="margin-top: 12px; font-style: italic; color: #999;">Du kommer att behöva logga in igen för att komma åt plattformen.</p>
+                    <h4 class="logout-info-title">Avsluta session</h4>
+                    <p class="logout-info-text">Är du säker på att du vill avsluta sessionen?</p>
                 </div>
             </div>
             <div class="logout-modal-actions">
                 <button class="logout-btn-cancel" onclick="closeLogoutOverlay()">Avbryt</button>
-                <button class="logout-btn-confirm" onclick="confirmLogout()">Logga ut</button>
+                <button class="logout-btn-confirm" onclick="confirmLogout()">Avsluta session</button>
             </div>
         `;
         
@@ -233,7 +234,7 @@ async function confirmLogout() {
         const originalText = button.textContent;
         
         // Show loading state
-        button.textContent = 'Loggar ut...';
+        button.textContent = 'Avslutar...';
         button.disabled = true;
         
         // Clear all transfers on the server
@@ -254,9 +255,12 @@ async function confirmLogout() {
         // Clear all session and patient data
         localStorage.removeItem('currentTransferId');
         localStorage.removeItem('currentPatientName');
+        localStorage.removeItem('currentSessionCode');
         localStorage.removeItem('hasSeenLogin');
         localStorage.removeItem('mmdcare_auth');
         localStorage.removeItem('uploadedFiles');
+        localStorage.removeItem('mmd_patient_verification');
+        localStorage.removeItem('mmd_doctor_verification');
         
         // Clear all patient transfer mappings
         const patientIds = ['anders-boman', 'markus-selin', 'samuel-oldmark'];
@@ -392,4 +396,92 @@ ${summary}${detailedContent}
         // Redirect to GPT chat
         window.location.href = 'gpt-chat.html';
     }, 1500);
+}
+
+function updateSessionTimeRemaining() {
+    const SESSION_TTL_MINUTES = 45;
+    const sessionStartTime = localStorage.getItem('sessionStartTime');
+    const timeRemainingEl = getSessionTimeRemainingElement();
+    
+    if (!sessionStartTime) {
+        if (timeRemainingEl) {
+            timeRemainingEl.textContent = 'Ingen aktiv session';
+        }
+        removeSessionTimerToast();
+        if (globalSessionTimerIntervalId) {
+            clearInterval(globalSessionTimerIntervalId);
+            globalSessionTimerIntervalId = null;
+        }
+        return;
+    }
+    
+    if (!timeRemainingEl) {
+        initSessionTimerToast();
+        return;
+    }
+    
+    const startTime = parseInt(sessionStartTime, 10);
+    const now = Date.now();
+    const elapsedMs = now - startTime;
+    const sessionDurationMs = SESSION_TTL_MINUTES * 60 * 1000;
+    const remainingMs = sessionDurationMs - elapsedMs;
+    
+    if (remainingMs <= 0) {
+        timeRemainingEl.textContent = 'Sessionen har gått ut';
+        return;
+    }
+    
+    const remainingMinutes = Math.floor(remainingMs / (60 * 1000));
+    const remainingSeconds = Math.floor((remainingMs % (60 * 1000)) / 1000);
+    
+    if (remainingMinutes > 0) {
+        timeRemainingEl.textContent = `${remainingMinutes} min ${remainingSeconds} sek`;
+    } else {
+        timeRemainingEl.textContent = `${remainingSeconds} sek`;
+    }
+}
+
+function getSessionTimeRemainingElement() {
+    return document.getElementById('globalSessionTimeRemaining') || document.getElementById('sessionTimeRemaining');
+}
+
+function initSessionTimerToast() {
+    const sessionStartTime = localStorage.getItem('sessionStartTime');
+    const existing = document.querySelector('.session-timer-toast');
+    
+    if (!sessionStartTime) {
+        if (existing) existing.remove();
+        return;
+    }
+    
+    if (existing) {
+        ensureSessionTimerInterval();
+        return;
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = 'session-timer-toast';
+    if (document.querySelector('.dashboard')) {
+        toast.classList.add('dashboard-context');
+    }
+    toast.innerHTML = `
+        <span class="timer-label">Sessionstid kvar</span>
+        <span id="globalSessionTimeRemaining" class="timer-value">Beräknar...</span>
+    `;
+    document.body.appendChild(toast);
+    updateSessionTimeRemaining();
+    ensureSessionTimerInterval();
+}
+
+function ensureSessionTimerInterval() {
+    if (!globalSessionTimerIntervalId) {
+        globalSessionTimerIntervalId = setInterval(updateSessionTimeRemaining, 1000);
+    }
+}
+
+function removeSessionTimerToast() {
+    const toast = document.querySelector('.session-timer-toast');
+    if (toast) {
+        toast.remove();
+    }
 }

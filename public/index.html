@@ -6,805 +6,1060 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>MMDCare - BankID Inloggning</title>
+    <title>MMDCare – Juridiskt sessionflöde</title>
     <link rel="stylesheet" href="styles.css">
     <style>
-        /* Login page specific styles */
-        .login-container {
-            min-height: 100vh;
-            background-color: #F0F2F5;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 40px 20px;
-        }
-
-        /* Show login content by default, hide only if user has seen it */
-        .login-container {
-            opacity: 1;
-            transition: opacity 0.3s ease;
-        }
-
-        .login-container.hide {
-            opacity: 0;
-        }
-
-
-        .login-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            max-width: 400px;
-            width: 100%;
-        }
-
-        /* Login card styling */
-        .login-card {
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #F0F2F5;
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
+            color: #1D212B;
         }
-
-        /* MMDCare Logo Section */
-        .login-logo-section {
-            margin-bottom: 40px;
-        }
-
-        .login-logo-container {
+        .page-shell {
+            max-width: 1040px;
+            margin: 0 auto;
+            padding: 40px 24px 56px;
+            min-height: 100vh;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            gap: 12px;
         }
-
-        .login-logo {
-            height: 50px;
-            width: auto;
-            filter: brightness(0) saturate(100%) invert(8%) sepia(8%) saturate(2000%) hue-rotate(200deg) brightness(0.9) contrast(1.1);
+        .page-header {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 24px;
+            max-width: 520px;
         }
-
-        .login-logo-text {
+        .eyebrow {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #6B7280;
+            font-weight: 600;
+        }
+        .page-header h1 {
+            margin: 4px 0 8px;
             font-size: 28px;
             font-weight: 600;
-            color: #1A1D28;
+            color: #0F172A;
         }
-
-        /* Patient List Section */
-        .patient-list-section {
-            margin-bottom: 20px;
-            width: 100%;
-            max-width: 500px;
+        .page-header p {
+            margin: 0;
+            color: #4B5563;
+            max-width: 640px;
+            line-height: 1.5;
         }
-
-        .patient-list-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .patient-item {
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-bottom: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
+        .chips {
             display: flex;
-            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
             justify-content: center;
-            position: relative;
         }
-
-        .patient-item:hover {
-            border-color: #1d4ed8;
-            box-shadow: 0 2px 8px rgba(29, 78, 216, 0.1);
-        }
-
-        .patient-item.selected {
-            border-color: #1d4ed8;
-            background: #eff6ff;
-        }
-
-        .select-patient-button {
-            width: 100%;
-            padding: 14px 24px;
-            background: #1d4ed8;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
+        .chip {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            background: #E5E7EB;
+            color: #374151;
             font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            margin-top: 20px;
         }
-
-        .select-patient-button:hover {
-            background: #1e40af;
-            box-shadow: 0 2px 8px rgba(29, 78, 216, 0.2);
-        }
-
-        .select-patient-button:active {
-            transform: scale(0.98);
-        }
-
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        .patient-indicator-circle {
-            position: absolute;
-            right: 20px;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #1d4ed8;
-            border-radius: 50%;
-            flex-shrink: 0;
+        .wizard-layout {
+            width: 100%;
+            max-width: 980px;
             display: flex;
+            flex-direction: column;
+            gap: 24px;
+            align-items: stretch;
+        }
+        .step-grid {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 24px;
+        }
+        .step-card {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-height: 100%;
+            transition: opacity 0.2s ease;
+        }
+        .step-card.disabled {
+            opacity: 0.45;
+        }
+        .step-card.disabled button {
+            pointer-events: none;
+            opacity: 0.65;
+        }
+        .card,
+        .step-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            border: 1px solid #E5E7EB;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .status-stack {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .step-card h2,
+        .collapsible h2 {
+            margin: 0;
+            font-size: 18px;
+            color: #0F172A;
+        }
+        .step-card p,
+        .collapsible p {
+            margin: 0;
+            color: #4B5563;
+            line-height: 1.5;
+        }
+        label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 4px;
+        }
+        input {
+            border: 1px solid #D1D5DB;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 15px;
+            width: 100%;
+            background: #FFFFFF;
+        }
+        .button {
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
+            gap: 8px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
         }
-
-        .patient-indicator-circle.selected {
-            background: #1d4ed8;
+        .button-primary {
+            background: #1D4ED8;
+            color: #FFFFFF;
         }
-
-        .patient-indicator-circle.selected::after {
-            content: '';
+        .button-primary:hover {
+            background: #1E40AF;
+        }
+        .button-ghost {
+            background: #FFFFFF;
+            color: #1D4ED8;
+            border: 1px solid #CBD5F5;
+        }
+        .button-ghost:hover {
+            background: #F3F4F6;
+        }
+        .code-display {
+            font-size: 40px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #111827;
+            text-align: center;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: #F9FAFB;
+            border: 1px dashed #CBD5F5;
+        }
+        .meta {
+            font-size: 13px;
+            color: #6B7280;
+        }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 999px;
+            padding: 6px 12px;
+        }
+        .status-pill span {
             width: 8px;
             height: 8px;
-            background: white;
             border-radius: 50%;
+            display: inline-block;
         }
-
-        .patient-name {
-            font-size: 16px;
-            font-weight: 500;
-            color: #1f2937;
+        .status-pill.neutral {
+            background: #E5E7EB;
+            color: #4B5563;
         }
-
-        .patient-status {
-            font-size: 14px;
-            color: #6b7280;
-            margin-top: 8px;
+        .status-pill.neutral span {
+            background: #9CA3AF;
         }
-
-        .patient-status.waiting {
-            color: #f59e0b;
+        .status-pill.waiting {
+            background: #FDF6B2;
+            color: #92400E;
         }
-
-        .patient-status.ready {
-            color: #059669;
+        .status-pill.waiting span {
+            background: #F59E0B;
         }
-
-        /* BankID Section */
-        .bankid-section {
-            margin-bottom: 20px;
+        .status-pill.success {
+            background: #DEF7EC;
+            color: #065F46;
         }
-
-        .bankid-logo-container {
+        .status-pill.success span {
+            background: #059669;
+        }
+        .timeline {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 3px;
-            margin-bottom: 16px;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 6px;
         }
-
-        .bankid-logo {
-            height: 40px;
-            width: auto;
+        .timeline-item {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
         }
-
-        .identify-text {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 8px;
+        .timeline-item::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            background: #D1D5DB;
+            border-radius: 50%;
+            margin-top: 6px;
         }
-
-        .instruction-text {
+        .legal-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .legal-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
             font-size: 14px;
-            color: #666;
-            font-weight: 400;
+            line-height: 1.5;
+            color: #374151;
         }
-
-
-
-        /* Responsive adjustments */
-        @media (max-width: 480px) {
-            .login-container {
-                padding: 20px 16px;
+        .legal-list li::before {
+            content: "•";
+            color: #9CA3AF;
+            font-size: 20px;
+            line-height: 1;
+            transform: translateY(-2px);
+        }
+        .session-state {
+            border: 1px dashed #D1D5DB;
+            border-radius: 14px;
+            padding: 16px;
+            background: #F9FAFB;
+        }
+        .session-log {
+            border-radius: 12px;
+            background: #1D212B;
+            color: #E5E7EB;
+            padding: 14px;
+            font-size: 13px;
+            max-height: 180px;
+            overflow: auto;
+            line-height: 1.4;
+        }
+        .session-log-entry + .session-log-entry {
+            margin-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding-top: 8px;
+        }
+        .architecture-pill {
+            font-size: 12px;
+            font-weight: 600;
+            color: #374151;
+            background: #E5E7EB;
+            padding: 4px 10px;
+            border-radius: 999px;
+            width: fit-content;
+        }
+        .session-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .waiting-copy {
+            font-size: 14px;
+            color: #4B5563;
+            margin-top: 4px;
+        }
+        .collapsible {
+            padding: 0;
+            overflow: hidden;
+            border: 1px solid #E5E7EB;
+            border-radius: 16px;
+            background: #FFFFFF;
+            width: 100%;
+        }
+        .collapsible-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 20px;
+            cursor: pointer;
+        }
+        .collapsible-chevron {
+            font-size: 18px;
+            color: #6B7280;
+            transition: transform 0.2s ease;
+        }
+        .collapsible.open .collapsible-chevron {
+            transform: rotate(90deg);
+        }
+        .collapsible-content {
+            padding: 0 20px 20px 20px;
+            display: none;
+            gap: 14px;
+            flex-direction: column;
+        }
+        .collapsible.open .collapsible-content {
+            display: flex;
+        }
+        @media (max-width: 900px) {
+            .wizard-layout {
+                flex-direction: column;
+                align-items: stretch;
             }
-            
-            .login-card {
-                padding: 24px;
+        }
+        @media (max-width: 720px) {
+            .page-shell {
+                padding: 28px 16px 40px;
             }
-            
-            .login-logo-section {
-                margin-bottom: 30px;
-            }
-            
-            .bankid-section {
-                margin-bottom: 15px;
-            }
-            
-            .patient-list-section {
-                margin-bottom: 15px;
+            .code-display {
+                font-size: 32px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-content">
-            <!-- MMDCare Logo Section -->
-            <div class="login-logo-section">
-                <div class="login-logo-container">
-                    <img src="Assets/mmdconnect.png" alt="MMDCare" class="login-logo">
-                    <span class="login-logo-text">MMDCare</span>
+    <div class="page-shell">
+        <header class="page-header">
+            <div class="eyebrow">MMDCare</div>
+            <h1>Starta en delningssession</h1>
+            <p>Gå igenom stegen i ordning: generera kod, legitimera dig och invänta patientens BankID. Filöverföringen startar först när båda är verifierade.</p>
+            <div class="chips">
+                <span class="chip">SITHS</span>
+                <span class="chip">BankID</span>
+                <span class="chip">PDL/GDPR</span>
                 </div>
+        </header>
+
+        <div class="wizard-layout">
+            <div class="step-grid">
+                <section class="step-card active" id="step1Card">
+                    <div>
+                        <p class="eyebrow" style="font-size:12px;letter-spacing:0.12em;">Steg 1 · Engångskod</p>
+                        <h2>Generera kod för patienten</h2>
+                        <p>Skapar en ny sessionsmiljö (45 min TTL) och loggar åtkomsten.</p>
+            </div>
+                    <div class="session-actions">
+                        <button class="button button-primary" id="generateCodeBtn">
+                            Generera ny kod
+                        </button>
+                        <button class="button button-ghost" id="copyCodeBtn" disabled>Kopiera kod</button>
+                    </div>
+                    <div class="code-display" id="sessionCodeDisplay">– – –</div>
+                    <div class="meta" id="codeMeta">Ingen aktiv session</div>
+                    <div class="meta" id="step1Status">Dela engångskoden med patienten.</div>
+                </section>
+
+                <section class="step-card" id="sithsCard">
+                    <div>
+                        <p class="eyebrow" style="font-size:12px;letter-spacing:0.12em;">Steg 2 · Läkare legitimerar sig</p>
+                        <h2>SITHS identifiering</h2>
+                        <p>Verifierar personlig behörighet och kopplar dig till vald vårdgivare.</p>
+                </div>
+                    <div class="session-actions">
+                        <button class="button button-primary" id="startSithsBtn">Starta SITHS legitimering</button>
+                        <button class="button button-ghost" id="resetSithsBtn">Återställ status</button>
+                    </div>
+                    <div id="sithsStatusPill" class="status-pill neutral">
+                        <span></span>
+                        <div>Ej påbörjad</div>
+                    </div>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div>
+                                <strong>Personligt SITHS-certifikat</strong>
+                                <span>Verifierar att du är legitimerad vårdpersonal.</span>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div>
+                                <strong>Behörighetsstyrning</strong>
+                                <span>HSLF-FS 2016:40 – kopplar roll, vårdgivare och ändamål.</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
 
-            <!-- Patient List Section -->
-            <div class="patient-list-section">
-                <h2 class="patient-list-title">Patienter</h2>
-                <div id="patient-list">
-                    <!-- Patient items will be dynamically added here -->
-                </div>
-                <button id="select-patient-button" class="select-patient-button">Välj patient</button>
-            </div>
-
+            <div class="status-stack">
+                <section class="collapsible open" id="sessionStatusCard">
+                    <div class="collapsible-header">
+                        <h2>Sessionsstatus</h2>
+                        <span class="collapsible-chevron">›</span>
         </div>
+                    <div class="collapsible-content">
+                        <div class="session-state">
+                            <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+                                <div id="doctorStatusPill" class="status-pill neutral">
+                                    <span></span>
+                                    <div>Läkare</div>
+                                </div>
+                                <div id="patientStatusPill" class="status-pill neutral">
+                                    <span></span>
+                                    <div>Patient</div>
+                                </div>
+                                <div id="sessionReadyPill" class="status-pill neutral">
+                                    <span></span>
+                                    <div>Session</div>
+                                </div>
+                            </div>
+                            <p class="waiting-copy" id="sessionCopy">Generera kod för att starta flödet.</p>
+                        </div>
+                        <div class="session-actions">
+                            <button class="button button-ghost" id="cancelSessionBtn">Avsluta session</button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="collapsible" id="legalCard">
+                    <div class="collapsible-header">
+                        <h2>Juridiskt flöde</h2>
+                        <span class="collapsible-chevron">›</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <ul class="legal-list">
+                            <li>Patienten informeras om läkare, att data speglas flyktigt, tidsbegränsning, ej lagring samt att åtkomst loggas.</li>
+                            <li>Samtycke loggas enligt GDPR art. 6.1(a) + 9.2(a). Endast åtkomstlogg (ej datapayload) sparas i 5 år.</li>
+                            <li>Läkaren identifieras med SITHS, kopplas till roll och vårdgivare och behörighetsstyrningen kontrolleras.</li>
+                            <li>När båda är verifierade skapas ett krypterat sessions-ID där filerna endast lever i RAM, read-only.</li>
+                        </ul>
+                        <p class="meta">Efter 45 minuter stängs sessionen och all speglad data raderas automatiskt.</p>
+                    </div>
+                </section>
+            </div>
     </div>
 
     <script>
-        let currentTransferId = null;
-        let currentPatientName = null;
-        let eventSource = null;
-        let pollIntervalId = null;
-        let uploadDetected = false;
-        let initialTransferStatus = null; // Track the initial status when patient is selected
+        const SESSION_TTL_MINUTES = 45;
+        const state = {
+            transferId: null,
+            sessionCode: null,
+            patientAlias: 'Patient',
+            doctorVerified: false,
+            patientVerified: false,
+            patientStage: 'waiting',
+            pollIntervalId: null,
+            initialFileCount: 0,
+            uploadDetected: false,
+            redirectScheduled: false
+        };
+        let patientStagePollId = null;
+        let lastStageNotified = null;
 
-        // Patient list
-        const patients = [
-            { name: 'Anders Boman', id: 'anders-boman' },
-            { name: 'Markus Selin', id: 'markus-selin' },
-            { name: 'Samuel Oldmark', id: 'samuel-oldmark' }
-        ];
+        const elements = {
+            generateCodeBtn: document.getElementById('generateCodeBtn'),
+            copyCodeBtn: document.getElementById('copyCodeBtn'),
+            sessionCodeDisplay: document.getElementById('sessionCodeDisplay'),
+            codeMeta: document.getElementById('codeMeta'),
+            sessionLog: document.getElementById('sessionLog'),
+            doctorStatusPill: document.getElementById('doctorStatusPill'),
+            patientStatusPill: document.getElementById('patientStatusPill'),
+            sessionReadyPill: document.getElementById('sessionReadyPill'),
+            sessionCopy: document.getElementById('sessionCopy'),
+            startSithsBtn: document.getElementById('startSithsBtn'),
+            resetSithsBtn: document.getElementById('resetSithsBtn'),
+            sithsStatusPill: document.getElementById('sithsStatusPill'),
+            cancelSessionBtn: document.getElementById('cancelSessionBtn')
+        };
+        const stepIds = ['step1Card', 'sithsCard'];
 
-        // Always redirect to login page first - login.html will handle authentication check
-        // and redirect back here if already authenticated
-        document.addEventListener('DOMContentLoaded', function() {
-            // Check if we came from login page (to avoid redirect loop)
-            const fromLogin = sessionStorage.getItem('fromLogin');
-            
-            if (!fromLogin) {
-                // Not from login page, redirect to login first
-                window.location.href = 'login.html';
-                return;
-            }
-            
-            // Clear the flag
-            sessionStorage.removeItem('fromLogin');
-            
-            // Check if user is authenticated
-            const authData = localStorage.getItem('mmdcare_auth');
-            
-            if (!authData) {
-                // Not authenticated, redirect to login page
-                window.location.href = 'login.html';
-                return;
-            }
-            
-            try {
-                const auth = JSON.parse(authData);
-                if (!auth.authenticated) {
-                    // Not authenticated, redirect to login page
-                    window.location.href = 'login.html';
-                    return;
-                }
-            } catch (e) {
-                // Invalid auth data, redirect to login page
-                window.location.href = 'login.html';
-                return;
-            }
-            
-            // User is authenticated, load patient list
-            console.log('User authenticated, loading patient list...');
-            loadPatientList();
-            
-            // Add click handler for select patient button
-            const selectButton = document.getElementById('select-patient-button');
-            if (selectButton) {
-                selectButton.addEventListener('click', handleSelectPatientButton);
-            }
+        document.addEventListener('DOMContentLoaded', () => {
+            hydrateStateFromStorage();
+            wireEvents();
+            setupStepFlow();
+            setupCollapsibles();
+            updateStatusUI();
+            listenForStorageEvents();
         });
 
-        let selectedPatientId = null;
-        let selectedPatientName = null;
+        function hydrateStateFromStorage() {
+            state.transferId = null;
+            state.sessionCode = null;
+            state.patientAlias = 'Patient';
+            state.doctorVerified = false;
+            state.patientVerified = false;
+            state.patientStage = 'waiting';
+            state.uploadDetected = false;
+            state.redirectScheduled = false;
+            elements.sessionCodeDisplay.textContent = '– – –';
+            elements.copyCodeBtn.disabled = true;
+            updateCodeMeta('Ingen aktiv session');
+            updateStepStatuses('waiting');
+        }
 
-        async function handleSelectPatientButton() {
-            if (!selectedPatientId || !selectedPatientName) {
-                // No patient selected, show message or do nothing
+        function setupStepFlow() {
+            const initialStep = state.patientVerified ? 'sithsCard' : 'step1Card';
+            showStep(initialStep);
+        }
+
+        function showStep(stepId) {
+            stepIds.forEach(id => {
+                const card = document.getElementById(id);
+                if (card) {
+                    card.classList.toggle('active', true);
+                }
+            });
+        }
+
+        function wireEvents() {
+            elements.generateCodeBtn.addEventListener('click', generateNewCode);
+            elements.copyCodeBtn.addEventListener('click', copyCodeToClipboard);
+            elements.startSithsBtn.addEventListener('click', simulateSithsFlow);
+            elements.resetSithsBtn.addEventListener('click', resetSithsStatus);
+            elements.cancelSessionBtn.addEventListener('click', cancelSession);
+        }
+
+        function listenForStorageEvents() {
+            window.addEventListener('storage', (event) => {
+                if (event.key === 'mmd_patient_verification') {
+                    const payload = readJSON('mmd_patient_verification');
+                    if (payload && matchesCurrentCode(payload.code)) {
+                        state.patientVerified = payload.verified === true;
+                        addLogEntry('Patient legitimerades med BankID.');
+                        updateStatusUI();
+                        maybeStartMonitoring();
+                        handlePatientVerification();
+                    }
+                }
+            });
+        }
+
+        function matchesCurrentCode(code) {
+            return state.sessionCode && code === state.sessionCode;
+        }
+
+        function startPatientVerificationPoll() {
+            stopPatientVerificationPoll();
+            if (!state.sessionCode || state.patientVerified) {
+                updateStepStatuses(state.patientVerified ? 'approved' : 'waiting');
                 return;
             }
-            
-            // CRITICAL: Clear dashboard BEFORE selecting patient
-            // This ensures old files are removed before new uploads
-            console.log('Clearing dashboard before patient selection');
-            await clearDashboardForPatient();
-            
-            // Select the patient and show waiting message
-            selectPatient(selectedPatientId, selectedPatientName);
-        }
-        
-        async function clearDashboardForPatient() {
-            // Clear ALL localStorage file data for this patient
-            const patientIds = ['anders-boman', 'markus-selin', 'samuel-oldmark'];
-            patientIds.forEach(patientId => {
-                const transferId = localStorage.getItem(`patient_transfer_${patientId}`);
-                if (transferId) {
-                    // Clear all file-related localStorage
-                    localStorage.removeItem(`mmd_files_${transferId}`);
-                    localStorage.removeItem(`transfer_patient_${transferId}`);
-                    localStorage.removeItem(`transfer_created_${transferId}`);
-                    console.log('Cleared localStorage for transfer:', transferId);
-                }
-            });
-            
-            // Clear any remaining file data
-            Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('mmd_files_') || 
-                    key === 'uploadedFiles' ||
-                    key === 'currentTransferId') {
-                    localStorage.removeItem(key);
-                    console.log('Cleared:', key);
-                }
-            });
-            
-            // Also clear currentTransferId to ensure dashboard starts fresh
-            localStorage.removeItem('currentTransferId');
-            
-            console.log('✅ Dashboard cleared - ready for new patient selection');
+            patientStagePollId = setInterval(checkPatientStageFromServer, 3000);
+            checkPatientStageFromServer();
         }
 
-        function loadPatientList() {
-            const patientListContainer = document.getElementById('patient-list');
-            patientListContainer.innerHTML = '';
-
-            patients.forEach((patient, index) => {
-                const patientItem = document.createElement('div');
-                patientItem.className = 'patient-item';
-                patientItem.dataset.patientId = patient.id;
-                patientItem.dataset.patientName = patient.name;
-
-                // First patient is pre-selected
-                const isFirst = index === 0;
-                if (isFirst) {
-                    patientItem.classList.add('selected');
-                    selectedPatientId = patient.id;
-                    selectedPatientName = patient.name;
-                }
-
-                // Patient card with circle indicator
-                patientItem.innerHTML = `
-                    <div class="patient-name">${patient.name}</div>
-                    <div class="patient-indicator-circle ${isFirst ? 'selected' : ''}"></div>
-                `;
-
-                // Store patient data on the item for button click
-                patientItem.dataset.patientId = patient.id;
-                patientItem.dataset.patientName = patient.name;
-                
-                // Highlight patient on click, but don't select yet
-                patientItem.addEventListener('click', () => {
-                    // Clear previous selection
-                    document.querySelectorAll('.patient-item').forEach(item => {
-                        item.classList.remove('selected');
-                        const circle = item.querySelector('.patient-indicator-circle');
-                        if (circle) {
-                            circle.classList.remove('selected');
-                        }
-                    });
-                    // Select this patient
-                    patientItem.classList.add('selected');
-                    const circle = patientItem.querySelector('.patient-indicator-circle');
-                    if (circle) {
-                        circle.classList.add('selected');
-                    }
-                    selectedPatientId = patient.id;
-                    selectedPatientName = patient.name;
-                });
-                
-                patientListContainer.appendChild(patientItem);
-            });
-        }
-
-        async function selectPatient(patientId, patientName) {
-            console.log('Selecting patient:', patientName, 'ID:', patientId);
-            currentPatientName = patientName;
-            
-            // CRITICAL: Clear dashboard and old files for this patient
-            // This ensures old files are deleted when selecting a patient
-            await clearDashboardForPatient();
-            
-            const oldTransferId = localStorage.getItem(`patient_transfer_${patientId}`);
-            if (oldTransferId) {
-                console.log('Clearing old transfer for patient:', oldTransferId);
-                // Clear old localStorage data
-                localStorage.removeItem(`transfer_patient_${oldTransferId}`);
-                localStorage.removeItem(`mmd_files_${oldTransferId}`);
-                localStorage.removeItem(`transfer_created_${oldTransferId}`);
+        function stopPatientVerificationPoll() {
+            if (patientStagePollId) {
+                clearInterval(patientStagePollId);
+                patientStagePollId = null;
             }
-            
-            // CRITICAL: Always create a NEW transfer - never reuse old ones
-            // Server will automatically delete old transfer when creating new one
-            let transferId = null;
-            
+        }
+
+        async function checkPatientStageFromServer() {
+            if (!state.sessionCode) return;
             try {
-                // Always create a new transfer (server will handle deleting old one)
-                console.log('Creating NEW transfer for patient:', patientName);
-                const postResponse = await fetch('/api/transfers', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ patientId: patientId })
-                });
-                
-                if (postResponse.ok) {
-                    const data = await postResponse.json();
-                    transferId = data.transferId;
-                    console.log('Created NEW transfer ID for patient:', patientName, transferId);
-                    
-                    // Verify the transfer is empty (should always be empty for new transfers)
-                    const verifyResponse = await fetch(`/api/files?transferId=${transferId}`, {
-                        cache: 'no-store'
-                    });
-                    if (verifyResponse.ok) {
-                        const verifyData = await verifyResponse.json();
-                        if (verifyData.files && verifyData.files.length > 0) {
-                            console.error('ERROR: New transfer has files! Creating replacement transfer.');
-                            // Create another new transfer
-                            const retryResponse = await fetch('/api/transfers', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ patientId: patientId })
-                            });
-                            if (retryResponse.ok) {
-                                const retryData = await retryResponse.json();
-                                transferId = retryData.transferId;
-                                console.log('Created replacement transfer ID:', transferId);
-                            }
-                        }
+                const res = await fetch(`/api/session-code?code=${encodeURIComponent(state.sessionCode)}`, { cache: 'no-store' });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.patientAlias) {
+                    state.patientAlias = data.patientAlias;
+                }
+                const stage = data.stage || (data.patientVerified ? 'approved' : 'waiting');
+                if (stage !== state.patientStage) {
+                    if (stage === 'initiated') {
+                        addLogEntry('Patienten påbörjade sessionen på mobilen.');
+                    } else if (stage === 'bankid') {
+                        addLogEntry('Patienten identifierar sig nu med BankID.');
+                    } else if (stage === 'approved') {
+                        addLogEntry('Patienten identifierades med BankID.');
                     }
-                } else {
-                    console.error('Failed to create transfer session');
+                    updateStepStatuses(stage);
+                    announceStage(stage);
+                    updateStatusUI();
+                }
+                if ((data.patientVerified || stage === 'approved') && !state.patientVerified) {
+                    state.patientVerified = true;
+                    handlePatientVerification();
+                    updateStatusUI();
+                    stopPatientVerificationPoll();
+                }
+            } catch (error) {
+                console.error('Failed to kontrollera patientstatus:', error);
+            }
+        }
+
+        function updateStepStatuses(stage = 'waiting') {
+            state.patientStage = stage;
+            const step1Status = document.getElementById('step1Status');
+            const sithsCard = document.getElementById('sithsCard');
+
+            let step1Text = 'Dela engångskoden med patienten.';
+            if (stage === 'initiated') {
+                step1Text = 'Patienten öppnade sessionen och granskar samtycket.';
+            } else if (stage === 'bankid') {
+                step1Text = 'Patienten har godkänt villkoren och legitimerar sig.';
+            } else if (stage === 'approved') {
+                step1Text = 'Patienten är klar – håll SITHS-kortet redo.';
+            }
+            if (step1Status) {
+                step1Status.textContent = step1Text;
+            }
+
+            if (sithsCard) {
+                const shouldDisable = stage !== 'approved';
+                sithsCard.classList.toggle('disabled', shouldDisable);
+                if (elements.startSithsBtn) {
+                    elements.startSithsBtn.disabled = shouldDisable;
+                }
+            }
+        }
+
+        async function generateNewCode() {
+            disablePrimaryButtons(true);
+            try {
+                const patientAlias = state.patientAlias?.trim() || 'Patient';
+                const transferData = await createTransfer(patientAlias);
+                if (!transferData) {
+                    updateCodeMeta('Kunde inte skapa session – försök igen.');
                     return;
                 }
-                
-                // Store transferId for this patient in localStorage
-                const patientTransferKey = `patient_transfer_${patientId}`;
-                localStorage.setItem(patientTransferKey, transferId);
-                
-                // Also store patient info with transferId
-                localStorage.setItem(`transfer_patient_${transferId}`, JSON.stringify({
-                    patientId: patientId,
-                    patientName: patientName
-                }));
+
+                const { transferId, sessionCode, patientAlias: aliasFromServer, doctorName } = transferData;
+                if (!transferId || !sessionCode) {
+                    updateCodeMeta('Servern kunde inte skapa kod.');
+                    return;
+                }
+
+                state.transferId = transferId;
+                state.sessionCode = sessionCode;
+                state.patientAlias = aliasFromServer || patientAlias;
+                state.doctorVerified = false;
+                state.patientVerified = false;
+                state.patientStage = 'waiting';
+                state.uploadDetected = false;
+                state.redirectScheduled = false;
+                lastStageNotified = null;
+
+                localStorage.setItem('currentTransferId', transferId);
+                localStorage.setItem('currentPatientName', state.patientAlias);
+                localStorage.removeItem('mmd_patient_verification');
+                localStorage.removeItem('mmd_doctor_verification');
+
+                renderSessionCode(sessionCode);
+                elements.copyCodeBtn.disabled = false;
+                updateCodeMeta(`Delas med patienten · Kod gäller i ${SESSION_TTL_MINUTES} minuter.`);
+                addLogEntry(`Ny session skapad för ${state.patientAlias}. TransferID: ${transferId}`);
+                markSessionStage('waiting');
+                announceStage('waiting');
+                updateStatusUI();
+                startPatientVerificationPoll();
+                showStep('step1Card');
             } catch (error) {
-                console.error('Error creating transfer session:', error);
-                return;
+                console.error(error);
+                updateCodeMeta('Ett fel uppstod när koden skulle genereras.');
+            } finally {
+                disablePrimaryButtons(false);
             }
-
-            currentTransferId = transferId;
-            
-            // Store transfer creation timestamp for session verification
-            localStorage.setItem(`transfer_created_${transferId}`, Date.now().toString());
-            console.log('Stored transfer creation timestamp for:', transferId);
-            
-            // Reset upload detection state for new transfer
-            uploadDetected = false;
-            initialTransferStatus = null; // Will be set by checkInitialTransferStatus
-            window.initialFileCount = 0; // Reset file count
-            
-            // Show notification in top right corner
-            showUploadNotification(`Väntar på uppladdning ${patientName}`);
-
-            // Start monitoring for this patient's transfer
-            // This will check initial status and then start polling
-            startFileMonitoring(patientId);
         }
 
-        function startFileMonitoring(patientId) {
-            if (!currentTransferId) return;
-            
-            // Clear any existing polling
-            if (pollIntervalId) {
-                clearInterval(pollIntervalId);
-                pollIntervalId = null;
-            }
-            uploadDetected = false;
-            initialTransferStatus = null; // Reset initial status
-            window.initialFileCount = 0; // Reset file count
-            
-            console.log('Starting file monitoring for patient:', currentPatientName, 'Transfer ID:', currentTransferId);
-            
-            // First, check the initial status of the transfer
-            // This will set initialTransferStatus and initialFileCount
-            checkInitialTransferStatus().then(() => {
-                console.log('Initial status checked. Status:', initialTransferStatus, 'File count:', window.initialFileCount);
-                // Only start polling if transfer is open (not closed with old files)
-                if (initialTransferStatus === 'open') {
-                    startPollingForUploads(patientId);
-                } else {
-                    console.log('Transfer is closed - waiting for new transfer creation');
-                }
-            });
+        function disablePrimaryButtons(disabled) {
+            elements.generateCodeBtn.disabled = disabled;
         }
-        
-        async function checkInitialTransferStatus() {
-            if (!currentTransferId) {
-                initialTransferStatus = 'open';
-                window.initialFileCount = 0;
-                return;
-            }
-            
+
+        async function createTransfer(patientAlias) {
             try {
-                const url = `/api/complete?transferId=${currentTransferId}`;
-                const res = await fetch(url, {
-                    method: 'GET',
-                    cache: 'no-store'
-                });
-                
-                if (res.ok) {
-                    const data = await res.json();
-                    initialTransferStatus = data.status;
-                    const initialFileCount = data.files?.length || 0;
-                    console.log('Initial transfer status:', initialTransferStatus, 'Files:', initialFileCount);
-                    
-                    // CRITICAL: For new transfers created when selecting patient, file count should be 0
-                    // Store initial file count to detect NEW uploads
-                    window.initialFileCount = initialFileCount;
-                    console.log('Set initial file count to:', window.initialFileCount);
-                    
-                    // If transfer is closed with files, it might be from old session
-                    // But since we always create new transfers, this shouldn't happen
-                    // If it does, we'll still track file count correctly
-                    if (data.status === 'closed' && initialFileCount > 0) {
-                        // Transfer is closed with files - might be old, but we'll still use it
-                        // The server ensures transfers are cleared on logout, so if it exists, it's current
-                        console.log('Transfer is closed with files - will detect new uploads by count increase');
-                    }
-                    
-                    // Ensure initial status is set
-                    if (!initialTransferStatus) {
-                        initialTransferStatus = 'open';
-                    }
-                } else {
-                    // If we can't check status, assume it's a new transfer and set to 'open'
-                    initialTransferStatus = 'open';
-                    window.initialFileCount = 0;
-                }
-            } catch (e) {
-                console.error('Error checking initial transfer status:', e);
-                // On error, assume it's a new transfer and set to 'open'
-                initialTransferStatus = 'open';
-                window.initialFileCount = 0;
-            }
-        }
-        
-        async function createNewTransferForPatient() {
-            if (!currentPatientName) return;
-            
-            // Find the patient ID from the name
-            const patient = patients.find(p => p.name === currentPatientName);
-            if (!patient) return;
-            
-            try {
-                // Create a new transfer for this patient
-                const postResponse = await fetch('/api/transfers', {
+                const payload = { patientId: slugify(patientAlias), patientAlias, doctorName: resolveDoctorName() };
+                const res = await fetch('/api/transfers', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ patientId: patient.id })
+                    body: JSON.stringify(payload)
                 });
-                
-                if (postResponse.ok) {
-                    const data = await postResponse.json();
-                    const newTransferId = data.transferId;
-                    console.log('Created new transfer ID for session:', newTransferId);
-                    
-                    // Update the current transfer ID
-                    currentTransferId = newTransferId;
-                    initialTransferStatus = 'open'; // New transfer is always open
-                    
-                    // CRITICAL: Clear old localStorage data before storing new transfer
-                    const oldTransferId = localStorage.getItem(`patient_transfer_${patient.id}`);
-                    if (oldTransferId && oldTransferId !== newTransferId) {
-                        localStorage.removeItem(`transfer_patient_${oldTransferId}`);
-                        localStorage.removeItem(`mmd_files_${oldTransferId}`);
-                    }
-                    
-                    // Update localStorage with new transfer
-                    localStorage.setItem(`patient_transfer_${patient.id}`, newTransferId);
-                    localStorage.setItem(`transfer_patient_${newTransferId}`, JSON.stringify({
-                        patientId: patient.id,
-                        patientName: currentPatientName
-                    }));
+                if (!res.ok) {
+                    const text = await res.text();
+                    throw new Error(text || 'Kunde inte skapa transfer.');
                 }
+                const data = await res.json();
+                return data;
             } catch (error) {
-                console.error('Error creating new transfer:', error);
+                console.error('Transfer creation failed', error);
+                return null;
             }
         }
 
-        function startPollingForUploads(patientId) {
-            if (pollIntervalId) {
-                console.log('Polling already active, clearing old interval');
-                clearInterval(pollIntervalId);
+        function renderSessionCode(code) {
+            elements.sessionCodeDisplay.textContent = code;
+        }
+
+        function updateCodeMeta(text) {
+            elements.codeMeta.textContent = text;
+        }
+
+        function copyCodeToClipboard() {
+            if (!state.sessionCode) return;
+            navigator.clipboard.writeText(state.sessionCode).then(() => {
+                updateCodeMeta('Kod kopierad. Dela den säkert via telefon eller möte.');
+            });
+        }
+
+        function simulateSithsFlow() {
+            if (!state.sessionCode) {
+                addLogEntry('Generera en kod innan SITHS påbörjas.');
+                return;
             }
-            
-            console.log('Starting polling for uploads...');
-            console.log('Transfer ID:', currentTransferId);
-            console.log('Initial file count:', window.initialFileCount);
-            
-            const poll = async () => {
-                try {
-                    // Check API endpoint for completion status
-                    const url = `/api/complete?transferId=${currentTransferId}`;
-                    console.log('Polling API endpoint:', url);
-                    
-                    const res = await fetch(url, {
-                        method: 'GET',
-                        cache: 'no-store'
-                    });
-                    
-                    console.log('Polling response status:', res.status);
-                    
+            if (!state.patientVerified) {
+                addLogEntry('Patienten måste först godkänna innan SITHS kan startas.');
+                    return;
+            }
+            setSithsStatus('waiting', 'Kort insatt, verifierar certifikat...');
+            addLogEntry('SITHS-legitimering initierades.');
+            setTimeout(() => setSithsStatus('waiting', 'Kontrollerar roll & behörighet...'), 1800);
+            setTimeout(() => {
+                state.doctorVerified = true;
+                storeDoctorVerification();
+                setSithsStatus('success', 'Legitimerad · behörighet verifierad.');
+                addLogEntry('Läkaren legitimerade sig via SITHS.');
+                markDoctorVerificationOnServer(true);
+                updateStatusUI();
+                maybeStartMonitoring();
+                redirectToDashboard();
+            }, 3200);
+        }
+
+        function resetSithsStatus() {
+            state.doctorVerified = false;
+            localStorage.removeItem('mmd_doctor_verification');
+            setSithsStatus('neutral', 'Ej påbörjad');
+            markDoctorVerificationOnServer(false);
+            updateStatusUI();
+        }
+
+        function setSithsStatus(status, text) {
+            const pill = elements.sithsStatusPill;
+            pill.className = `status-pill ${status}`;
+            pill.querySelector('div').textContent = text;
+        }
+
+        function storeDoctorVerification() {
+            localStorage.setItem('mmd_doctor_verification', JSON.stringify({
+                verified: true,
+                method: 'siths',
+                code: state.sessionCode,
+                verifiedAt: new Date().toISOString()
+            }));
+        }
+
+        function updateStatusUI() {
+            renderStatusPill(elements.doctorStatusPill, state.doctorVerified, 'Läkare verifierad');
+            renderStatusPill(elements.patientStatusPill, state.patientVerified, 'Patient verifierad');
+
+            const ready = Boolean(state.transferId && state.sessionCode && state.doctorVerified && state.patientVerified);
+            if (ready) {
+                elements.sessionReadyPill.className = 'status-pill success';
+                elements.sessionReadyPill.querySelector('div').textContent = 'Session aktiv';
+                elements.sessionCopy.textContent = 'Båda parter verifierade. Väntar på filer från mobilen.';
+            } else if (state.transferId) {
+                elements.sessionReadyPill.className = 'status-pill waiting';
+                elements.sessionReadyPill.querySelector('div').textContent = 'Väntar';
+                elements.sessionCopy.textContent = sessionCopyForStage();
+                } else {
+                elements.sessionReadyPill.className = 'status-pill neutral';
+                elements.sessionReadyPill.querySelector('div').textContent = 'Session';
+                elements.sessionCopy.textContent = 'Generera kod för att starta flödet.';
+            }
+            updateStepStatuses(state.patientStage);
+        }
+
+        function renderStatusPill(element, isDone, label) {
+            if (isDone) {
+                element.className = 'status-pill success';
+                element.querySelector('div').textContent = label;
+                } else {
+                element.className = 'status-pill waiting';
+                element.querySelector('div').textContent = `${label.split(' ')[0]} väntar`;
+            }
+        }
+
+        async function markDoctorVerificationOnServer(verified = true) {
+            if (!state.sessionCode) return;
+            try {
+                await fetch('/api/session-code/doctor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: state.sessionCode, verified })
+                });
+            } catch (error) {
+                console.error('Kunde inte uppdatera doktorstatus på servern:', error);
+            }
+        }
+
+        async function markSessionStage(stage) {
+            if (!state.sessionCode || !stage) return;
+            try {
+                await fetch('/api/session-code/stage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: state.sessionCode, stage })
+                });
+            } catch (error) {
+                console.error('Kunde inte uppdatera sessionsfasen:', error);
+            }
+        }
+
+        function redirectToDashboard() {
+            if (!state.transferId || state.redirectScheduled) return;
+            state.redirectScheduled = true;
+            localStorage.setItem('currentTransferId', state.transferId);
+            localStorage.setItem('currentPatientName', state.patientAlias);
+            setTimeout(() => window.location.href = 'dashboard.html', 900);
+        }
+
+        function sessionCopyForStage() {
+            if (!state.transferId) return 'Generera kod för att starta flödet.';
+            switch (state.patientStage) {
+                case 'initiated':
+                    return 'Session påbörjad av patient.';
+                case 'bankid':
+                    return 'Patienten identifierar sig med BankID.';
+                case 'approved':
+                    return state.doctorVerified
+                        ? 'Patienten har identifierat sig – öppnar översikten.'
+                        : 'Patienten har identifierat sig – din tur att legitimera dig.';
+                default:
+                    return 'Väntar på patient.';
+            }
+        }
+
+        function announceStage(stage) {
+            if (!stage || lastStageNotified === stage) return;
+            lastStageNotified = stage;
+            const messages = {
+                waiting: 'Väntar på patientens godkännande.',
+                initiated: 'Session påbörjad av patient.',
+                bankid: 'Patienten identifierar sig med BankID.',
+                approved: 'Patienten har identifierat sig.'
+            };
+            const types = {
+                waiting: 'waiting',
+                initiated: 'waiting',
+                bankid: 'waiting',
+                approved: 'success'
+            };
+            const text = messages[stage];
+            if (text) {
+                showUploadNotification(text, types[stage] || 'waiting');
+            }
+        }
+
+        function addLogEntry(message) {
+            if (!elements.sessionLog) return;
+            const entry = document.createElement('div');
+            entry.className = 'session-log-entry';
+            entry.innerHTML = `<strong>${new Date().toLocaleTimeString('sv-SE')}</strong> · ${message}`;
+            if (elements.sessionLog.children.length === 1 && elements.sessionLog.firstElementChild.textContent.includes('Ingen')) {
+                elements.sessionLog.innerHTML = '';
+            }
+            elements.sessionLog.prepend(entry);
+        }
+
+        function readJSON(key) {
+            const value = localStorage.getItem(key);
+            if (!value) return null;
+            try {
+                return JSON.parse(value);
+            } catch (error) {
+                console.error('JSON parse error', key, error);
+                return null;
+            }
+        }
+
+        function slugify(value) {
+            return value
+                .toLowerCase()
+                .replace(/å|ä/g, 'a')
+                .replace(/ö/g, 'o')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '') || `patient-${Date.now()}`;
+        }
+
+        function resolveDoctorName() {
+            const auth = readJSON('mmdcare_auth');
+            return auth?.doctorName || 'Dr. Anna Andersson';
+        }
+
+        function maybeStartMonitoring() {
+            if (state.transferId && state.doctorVerified && state.patientVerified && !state.pollIntervalId) {
+                startFileMonitoring();
+            }
+        }
+
+        function startFileMonitoring() {
+            if (!state.transferId) return;
+            clearPolling();
+            state.uploadDetected = false;
+            addLogEntry('Session aktiv – väntar på filuppladdning.');
+            checkInitialTransferStatus().then(() => {
+                if (!state.transferId) return;
+                state.pollIntervalId = setInterval(pollForUploads, 1000);
+                pollForUploads();
+            });
+        }
+
+        function clearPolling() {
+            if (state.pollIntervalId) {
+                clearInterval(state.pollIntervalId);
+                state.pollIntervalId = null;
+            }
+        }
+
+        async function checkInitialTransferStatus() {
+            if (!state.transferId) return;
+            try {
+                const res = await fetch(`/api/complete?transferId=${state.transferId}`, { cache: 'no-store' });
                     if (res.ok) {
                         const data = await res.json();
-                        console.log('Polling response data:', data);
-                        
-                        // Detect new files by comparing file count
-                        const currentFileCount = data.files?.length || 0;
-                        const initialFileCount = window.initialFileCount || 0;
-                        const hasNewFiles = currentFileCount > initialFileCount;
-                        
-                        console.log('File count check - Current:', currentFileCount, 'Initial:', initialFileCount, 'Has new files:', hasNewFiles);
-                        
-                        // Redirect if:
-                        // 1. NEW files were uploaded (file count increased)
-                        // 2. We haven't already detected an upload
-                        // 3. Transfer has files (not empty)
-                        if (hasNewFiles && 
-                            !uploadDetected && 
-                            currentFileCount > 0) {
-                            uploadDetected = true;
-                            clearInterval(pollIntervalId);
-                            pollIntervalId = null;
-                            
-                            console.log('✅ New upload detected! Files:', currentFileCount, 'Clearing old files and redirecting...');
-                            
-                            // CRITICAL: Clear ALL old files before redirecting
-                            // This ensures dashboard starts fresh and only shows new files
-                            Object.keys(localStorage).forEach(key => {
-                                if (key.startsWith('mmd_files_') || 
-                                    key === 'uploadedFiles') {
-                                    localStorage.removeItem(key);
-                                    console.log('Cleared old files before redirect:', key);
-                                }
-                            });
-                            
-                            // Show success notification
-                            showUploadNotification('Uppladdning genomförd', 'success');
-                            
-                            // Store the current transfer ID and patient name for the dashboard to use
-                            localStorage.setItem('currentTransferId', currentTransferId);
-                            localStorage.setItem('currentPatientName', currentPatientName);
-                            // Store when this transfer was created to verify it's from current session
-                            localStorage.setItem(`transfer_created_${currentTransferId}`, Date.now().toString());
-                            
-                            setTimeout(() => {
-                                redirectToOverview();
-                            }, 1500);
-                        } else {
-                            console.log('Waiting for upload - Status:', data.status, 'Files:', currentFileCount, 'Initial:', initialFileCount, 'Upload detected:', uploadDetected);
-                        }
-                    } else {
-                        console.log('Polling failed with status:', res.status);
-                        const errorText = await res.text();
-                        console.log('Polling error response:', errorText);
-                    }
-                } catch (e) {
-                    console.log('Polling error:', e.message);
+                    state.initialFileCount = data.files?.length || 0;
+                } else {
+                    state.initialFileCount = 0;
                 }
-            };
-            
-            // Poll ~2x per second for faster detection
-            pollIntervalId = setInterval(poll, 800);
-            poll(); // Initial poll
+            } catch (error) {
+                console.error('Initial status failed', error);
+                state.initialFileCount = 0;
+            }
+        }
+
+        async function pollForUploads() {
+            if (!state.transferId || state.uploadDetected || state.redirectScheduled) return;
+            try {
+                const res = await fetch(`/api/complete?transferId=${state.transferId}`, { cache: 'no-store' });
+                if (!res.ok) return;
+                const data = await res.json();
+                const currentCount = data.files?.length || 0;
+                if (currentCount > state.initialFileCount && currentCount > 0) {
+                    state.uploadDetected = true;
+                    clearPolling();
+                    addLogEntry('🎉 Filer har laddats upp. Översikten öppnas.');
+                    showUploadNotification('Filer mottagna – öppnar översikten', 'success');
+                    localStorage.setItem('currentTransferId', state.transferId);
+                    localStorage.setItem('currentPatientName', state.patientAlias);
+                    if (!state.redirectScheduled) {
+                        state.redirectScheduled = true;
+                        setTimeout(() => window.location.href = 'dashboard.html', 1400);
+                    }
+                }
+            } catch (error) {
+                console.error('Polling error', error);
+            }
+        }
+
+        function cancelSession() {
+            clearPolling();
+            stopPatientVerificationPoll();
+            if (state.sessionCode) {
+                markDoctorVerificationOnServer(false);
+                markSessionStage('cancelled');
+            }
+            state.transferId = null;
+            state.sessionCode = null;
+            state.patientAlias = 'Patient';
+            state.doctorVerified = false;
+            state.patientVerified = false;
+            state.patientStage = 'waiting';
+            state.uploadDetected = false;
+            state.redirectScheduled = false;
+            lastStageNotified = null;
+            localStorage.removeItem('currentTransferId');
+            localStorage.removeItem('currentPatientName');
+            localStorage.removeItem('mmd_patient_verification');
+            localStorage.removeItem('mmd_doctor_verification');
+            elements.sessionCodeDisplay.textContent = '– – –';
+            elements.copyCodeBtn.disabled = true;
+            updateCodeMeta('Session avbruten.');
+            addLogEntry('Sessionen avbröts manuellt.');
+            updateStatusUI();
+            resetSithsStatus();
+            updateStepStatuses('waiting');
+            showStep('step1Card');
+        }
+
+        function handlePatientVerification() {
+            if (!state.patientVerified) return;
+            state.patientStage = 'approved';
+            updateStepStatuses('approved');
+            announceStage('approved');
+            stopPatientVerificationPoll();
+            addLogEntry('Patienten godkände delningen och legitimerade sig.');
+            maybeStartMonitoring();
+            showStep('sithsCard');
+        }
+
+        function setupCollapsibles() {
+            document.querySelectorAll('.collapsible').forEach(section => {
+                const header = section.querySelector('.collapsible-header');
+                if (!header) return;
+                header.addEventListener('click', () => {
+                    section.classList.toggle('open');
+                });
+            });
         }
 
         function showUploadNotification(message, type = 'waiting') {
-            // Remove any existing notification
-            const existingNotification = document.querySelector('.upload-notification');
-            if (existingNotification) {
-                existingNotification.remove();
-            }
-            
-            // Create notification
+            const existing = document.querySelector('.upload-notification');
+            if (existing) existing.remove();
+
+            const indicatorColor = type === 'success' ? '#10B981' : '#2563EB';
             const notification = document.createElement('div');
             notification.className = 'upload-notification';
-            
-            // Set colors - white background with black text
-            const indicatorColor = type === 'success' ? '#059669' : '#f59e0b';
-            
             notification.style.cssText = `
                 position: fixed;
-                top: 20px;
-                right: 20px;
-                background: white;
-                color: #1f2937;
+                top: 24px;
+                right: 24px;
+                background: #0f172a;
+                color: white;
                 padding: 16px 24px;
-                border-radius: 12px;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-                z-index: 10000;
+                border-radius: 14px;
+                border: 1px solid rgba(148,163,184,0.25);
+                box-shadow: 0 20px 40px rgba(15,23,42,0.35);
                 font-size: 14px;
-                max-width: 350px;
-                border: 1px solid #e5e7eb;
-                animation: slideIn 0.3s ease-out;
+                z-index: 9999;
+                white-space: nowrap;
             `;
-            
             notification.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="width: 12px; height: 12px; background: ${indicatorColor}; border-radius: 50%; flex-shrink: 0;"></div>
-                    <div>
-                        <div style="font-weight: 600;">${message}</div>
-                    </div>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <span style="width:12px;height:12px;border-radius:50%;background:${indicatorColor};display:inline-block;"></span>
+                    <strong>${message}</strong>
                 </div>
             `;
-            
             document.body.appendChild(notification);
-            
-            // Remove after 4 seconds (or keep for success until redirect)
-            if (type === 'waiting') {
-                // Keep waiting notification visible until upload completes
-                // It will be replaced by success notification
-            } else {
-                // Success notification - remove after 3 seconds (redirect happens after 1.5s)
-                setTimeout(() => {
-                    notification.style.animation = 'slideIn 0.3s ease-out reverse';
-                    setTimeout(() => {
-                        notification.remove();
-                    }, 300);
-                }, 3000);
+            if (type === 'success') {
+                setTimeout(() => notification.remove(), 2500);
             }
         }
 
-        function redirectToOverview() {
-            // Redirect to the main platform (översikt page)
-            window.location.href = 'dashboard.html';
+        const pendingSessionNotice = sessionStorage.getItem('session_notice');
+        if (pendingSessionNotice) {
+            sessionStorage.removeItem('session_notice');
+            showUploadNotification(pendingSessionNotice, 'info');
         }
 
-        // Clean up on page unload
-        window.addEventListener('beforeunload', function() {
-            if (eventSource) {
-                eventSource.close();
-            }
-            if (pollIntervalId) {
-                clearInterval(pollIntervalId);
-            }
+        window.addEventListener('beforeunload', () => {
+            clearPolling();
         });
-
-        // Clear localStorage on page load to ensure fresh start
-        localStorage.removeItem('hasSeenLogin');
     </script>
 </body>
 </html>

@@ -9,11 +9,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { networkInterfaces } from "os";
 import pdfParse from "pdf-parse";
-import * as XLSX from "xlsx";
 import { put, head, del } from "@vercel/blob";
+import { Worker } from "worker_threads";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+const excelContentCache = new Map();
+const getExcelCacheKey = (transferId, filename) => `${transferId}:${filename}`;
 const hasBlobAccess = Boolean(
   process.env.BLOB_READ_WRITE_TOKEN ||
   process.env.BLOB_API_URL ||
@@ -51,6 +53,12 @@ const deleteTransferData = (transferId) => {
   }
   deleteLocalTransferFiles(transferId);
   transfers.delete(transferId);
+  removeSessionCodeForTransfer(transferId);
+  for (const key of excelContentCache.keys()) {
+    if (key.startsWith(`${transferId}:`)) {
+      excelContentCache.delete(key);
+    }
+  }
 };
 
 const removeTransferForPatient = (patientId) => {
@@ -76,10 +84,114 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(publicDir, "login.html"));
 });
 
+// Serve mobile-upload.html (with or without .html extension)
+app.get("/mobile-upload", (req, res) => {
+  res.sendFile(path.join(publicDir, "mobile-upload.html"));
+});
+app.get("/mobile-upload.html", (req, res) => {
+  res.sendFile(path.join(publicDir, "mobile-upload.html"));
+});
+
 // Ephemeral state for demo
 const transfers = new Map(); // transferId -> { status, files: [] }
 const clients = new Map();   // transferId -> Set(res) for SSE
 const patientTransfers = new Map(); // patientId -> transferId
+const sessionCodes = new Map(); // code -> { transferId, patientAlias, doctorName, createdAt, patientVerified, doctorVerified, stage }
+const SESSION_CODE_TTL = 45 * 60 * 1000;
+const SESSION_STAGES = new Set(['waiting', 'initiated', 'bankid', 'approved', 'cancelled']);
+
+const normalizeSessionCode = (code) => {
+  if (!code) return null;
+  const digits = code.replace(/[^0-9]/g, '');
+  if (digits.length !== 6) return null;
+  return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+};
+
+const generateSessionCode = () => {
+  let code;
+  do {
+    const digits = Math.floor(100000 + Math.random() * 900000).toString();
+    code = `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  } while (sessionCodes.has(code));
+  return code;
+};
+
+const registerSessionCode = ({ transferId, patientAlias, doctorName }) => {
+  if (!transferId) return null;
+  removeSessionCodeForTransfer(transferId);
+  const code = generateSessionCode();
+  sessionCodes.set(code, {
+    transferId,
+    patientAlias: patientAlias || 'Patient',
+    doctorName: doctorName || 'Dr. Anna Andersson',
+    createdAt: Date.now(),
+    patientVerified: false,
+    doctorVerified: false,
+    stage: 'waiting'
+  });
+  return code;
+};
+
+const removeSessionCodeForTransfer = (transferId) => {
+  if (!transferId) return;
+  for (const [code, data] of sessionCodes.entries()) {
+    if (data.transferId === transferId) {
+      sessionCodes.delete(code);
+    }
+  }
+};
+
+const getSessionCodeData = (code) => {
+  const normalized = normalizeSessionCode(code);
+  if (!normalized) return null;
+  const entry = sessionCodes.get(normalized);
+  if (!entry) return null;
+  if (Date.now() - entry.createdAt > SESSION_CODE_TTL) {
+    sessionCodes.delete(normalized);
+    return null;
+  }
+  return { code: normalized, ...entry };
+};
+
+const updateSessionStage = (code, stage) => {
+  const normalized = normalizeSessionCode(code);
+  if (!normalized) return null;
+  const entry = sessionCodes.get(normalized);
+  if (!entry) return null;
+  if (!SESSION_STAGES.has(stage)) return null;
+  if (Date.now() - entry.createdAt > SESSION_CODE_TTL) {
+    sessionCodes.delete(normalized);
+    return null;
+  }
+  entry.stage = stage;
+  if (stage === 'approved') {
+    entry.patientVerified = true;
+    const transfer = transfers.get(entry.transferId);
+    if (transfer) {
+      transfer.patientVerified = true;
+    }
+  }
+  sessionCodes.set(normalized, entry);
+  return { code: normalized, ...entry };
+};
+
+const updateDoctorVerification = (code, verified = true) => {
+  const normalized = normalizeSessionCode(code);
+  if (!normalized) return null;
+  const entry = sessionCodes.get(normalized);
+  if (!entry) return null;
+  if (Date.now() - entry.createdAt > SESSION_CODE_TTL) {
+    sessionCodes.delete(normalized);
+    return null;
+  }
+  entry.doctorVerified = Boolean(verified);
+  const transfer = transfers.get(entry.transferId);
+  if (transfer) {
+    transfer.doctorVerified = Boolean(verified);
+  }
+  sessionCodes.set(normalized, entry);
+  return { code: normalized, ...entry };
+};
 
 // API endpoint to clear all transfers (called on logout)
 app.post("/api/logout", async (req, res) => {
@@ -187,6 +299,7 @@ app.post("/api/logout", async (req, res) => {
   
   // Clear all patient-to-transfer mappings
   patientTransfers.clear();
+  sessionCodes.clear();
   
   // Close all SSE connections
   clients.forEach((clientSet, transferId) => {
@@ -236,14 +349,16 @@ const upload = multer({
 
 // 1) Create a new transfer session (desktop calls this)
 app.post("/transfers", (req, res) => {
+  const { patientAlias = 'Patient', doctorName = 'Dr. Anna Andersson' } = req.body || {};
   const id = uuid();
-  transfers.set(id, { status: "open", files: [], createdAt: Date.now() });
-  res.status(201).json({ transferId: id, expiresInSec: 900 });
+  transfers.set(id, { status: "open", files: [], createdAt: Date.now(), patientAlias, doctorName });
+  const sessionCode = registerSessionCode({ transferId: id, patientAlias, doctorName });
+  res.status(201).json({ transferId: id, expiresInSec: 900, sessionCode, patientAlias, doctorName });
 });
 
 // API route alias for /api/transfers (for HTML compatibility)
 app.get("/api/transfers", (req, res) => {
-  const { patientId } = req.query;
+  const { patientId, patientAlias = 'Patient', doctorName = 'Dr. Anna Andersson' } = req.query;
   
   if (!patientId) {
     return res.status(400).json({ error: 'patientId parameter required' });
@@ -260,15 +375,22 @@ app.get("/api/transfers", (req, res) => {
     files: [], 
     createdAt: Date.now(), 
     patientId: patientId,
+    patientAlias: patientAlias,
+    doctorName: doctorName,
     sessionId: sessionId
   });
   patientTransfers.set(patientId, newId);
+  const sessionCode = registerSessionCode({
+    transferId: newId,
+    patientAlias,
+    doctorName
+  });
   console.log('Created NEW transfer ID for patient (GET):', patientId, newId, 'Session:', sessionId);
-  return res.status(200).json({ transferId: newId, patientId, sessionId, existing: false });
+  return res.status(200).json({ transferId: newId, patientId, sessionId, existing: false, sessionCode, patientAlias, doctorName });
 });
 
 app.post("/api/transfers", (req, res) => {
-  const { patientId } = req.body || {};
+  const { patientId, patientAlias = 'Patient', doctorName = 'Dr. Anna Andersson' } = req.body || {};
   
   // ALWAYS create a NEW transfer - NEVER reuse old ones
   // This ensures complete data isolation between sessions
@@ -281,6 +403,8 @@ app.post("/api/transfers", (req, res) => {
     files: [], 
     createdAt: Date.now(), 
     patientId: patientId || null,
+    patientAlias,
+    doctorName,
     sessionId: sessionId
   });
   
@@ -291,7 +415,46 @@ app.post("/api/transfers", (req, res) => {
     console.log('Created NEW transfer ID for patient:', patientId, id, 'Session:', sessionId);
   }
   
-  res.status(201).json({ transferId: id, expiresInSec: 900, patientId, sessionId });
+  const sessionCode = registerSessionCode({
+    transferId: id,
+    patientAlias,
+    doctorName
+  });
+  
+  res.status(201).json({ transferId: id, expiresInSec: 900, patientId, sessionId, sessionCode, patientAlias, doctorName });
+});
+
+app.get("/api/session-code", (req, res) => {
+  const { code } = req.query;
+  const entry = getSessionCodeData(code);
+  if (!entry) {
+    return res.status(404).json({ error: "Koden hittades inte eller har gått ut." });
+  }
+  res.json(entry);
+});
+
+app.post("/api/session-code/stage", (req, res) => {
+  const { code, stage } = req.body || {};
+  if (!code || !stage) {
+    return res.status(400).json({ error: "Code and stage are required." });
+  }
+  const updated = updateSessionStage(code, stage);
+  if (!updated) {
+    return res.status(404).json({ error: "Koden hittades inte eller har gått ut." });
+  }
+  res.json({ success: true, stage: updated.stage });
+});
+
+app.post("/api/session-code/doctor", (req, res) => {
+  const { code, verified } = req.body || {};
+  if (!code) {
+    return res.status(400).json({ error: "Code is required." });
+  }
+  const updated = updateDoctorVerification(code, verified !== false);
+  if (!updated) {
+    return res.status(404).json({ error: "Koden hittades inte eller har gått ut." });
+  }
+  res.json({ success: true, doctorVerified: updated.doctorVerified });
 });
 
 // Get local network IP for mobile access
@@ -478,6 +641,7 @@ app.post("/api/upload", upload.single("file"), (req, res) => {
     }
 
     t.files.push(meta);
+    preloadExcelContent(transferId, meta);
     console.log('File added to transfer:', transferId, 'File:', meta.name, 'Total files:', t.files.length);
     console.log('Transfer status after upload:', t.status, 'Files count:', t.files.length);
     broadcast(transferId, { type: "file", file: meta });
@@ -535,6 +699,7 @@ app.post("/upload/:transferId", upload.single("file"), (req, res) => {
     }
 
     t.files.push(meta);
+    preloadExcelContent(transferId, meta);
     broadcast(transferId, { type: "file", file: meta });
     res.sendStatus(204);
   })();
@@ -667,6 +832,36 @@ app.post("/api/complete", (req, res) => {
 });
 
 // 7) Get PDF content for journal notes
+// Serve PDF file directly for preview
+app.get("/pdf-file/:transferId/:filename", async (req, res) => {
+  const { transferId, filename } = req.params;
+  const t = transfers.get(transferId);
+  if (!t) return res.status(404).send("Transfer not found");
+  
+  try {
+    const meta = t.files.find(f => f.name === filename);
+    if (!meta) return res.status(404).send("File not found");
+    
+    // If file has a blob URL, redirect to it
+    if (meta.url) {
+      return res.redirect(meta.url);
+    }
+    
+    // Otherwise serve from local disk
+    const filePath = path.join(uploadsRoot, transferId, filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send("File not found");
+    }
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Error serving PDF file:', error);
+    res.status(500).send("Error serving file");
+  }
+});
+
 app.get("/pdf-content/:transferId/:filename", async (req, res) => {
   const { transferId, filename } = req.params;
   const t = transfers.get(transferId);
@@ -987,9 +1182,15 @@ app.get("/api/excel-content", async (req, res) => {
       return res.status(404).json({ error: "Excel file not found in transfer" });
     }
 
+    const cacheKey = getExcelCacheKey(transferId, filename);
+    const cached = excelContentCache.get(cacheKey);
+    if (cached && cached.uploadedAt === excelFile.uploadedAt && cached.data) {
+      return res.json(cached.data);
+    }
+
     // Try to get file from local disk first, then from blob URL
     let excelBuffer;
-    const localFilePath = path.join(uploadsRoot, transferId, filename);
+    let localFilePath = path.join(uploadsRoot, transferId, filename);
     
     if (fs.existsSync(localFilePath)) {
       excelBuffer = fs.readFileSync(localFilePath);
@@ -1001,218 +1202,30 @@ app.get("/api/excel-content", async (req, res) => {
       }
       const arrayBuffer = await response.arrayBuffer();
       excelBuffer = Buffer.from(arrayBuffer);
+      
+      // Save to local disk for parsing
+      fs.mkdirSync(path.dirname(localFilePath), { recursive: true });
+      fs.writeFileSync(localFilePath, excelBuffer);
     } else {
       return res.status(404).json({ error: "Excel file not found in storage" });
     }
 
     // Parse the Excel content
-    let workbook;
     let structuredContent;
     try {
-      workbook = XLSX.read(excelBuffer, { type: 'buffer' });
-      structuredContent = parseExcelContent(excelFile, workbook);
+      structuredContent = await runExcelParser(localFilePath, excelFile);
     } catch (parseError) {
       console.error('Excel parsing failed:', parseError);
-      structuredContent = createFallbackExcelContent(excelFile);
+      console.error('Parse error stack:', parseError.stack);
+      structuredContent = { error: "Excel parsing failed", details: parseError.message };
     }
-
+    excelContentCache.set(cacheKey, { uploadedAt: excelFile.uploadedAt, data: structuredContent });
     res.json(structuredContent);
   } catch (error) {
     console.error('Error processing Excel content:', error);
     res.status(500).json({ error: "Failed to process Excel content", details: error.message });
   }
 });
-
-// Helper function to parse Excel content
-function parseExcelContent(excelFile, workbook) {
-  const filename = excelFile.name;
-  const uploadedAt = new Date(excelFile.uploadedAt || Date.now());
-
-  // Get the first sheet
-  const firstSheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[firstSheetName];
-
-  // Convert to JSON for easier parsing
-  const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-
-  // Extract heart-related data
-  const heartData = extractHeartData(jsonData);
-
-  // Create dynamic data mapping
-  const dynamicData = {};
-  const unwantedPatterns = [
-    'datum', 'date', 'tid', 'time', 'kl', 'klockan',
-    '<', '>', '≤', '≥', 'under', 'över', 'mindre', 'mer',
-    'normal', 'referens', 'ref', 'range', 'intervall',
-    'enhet', 'unit', 'värde', 'value', 'resultat', 'result',
-    'prov', 'sample', 'analys', 'analysis', 'test', 'mätning'
-  ];
-
-  const rawDataItems = jsonData.flat().filter(item => {
-    if (!item || typeof item !== 'string') return false;
-    const trimmed = item.trim().toLowerCase();
-    if (trimmed === '' || trimmed.length < 3) return false;
-    for (const pattern of unwantedPatterns) {
-      if (trimmed.includes(pattern)) return false;
-    }
-    if (/^[\d\s\.,\-<>≤≥]+$/.test(trimmed)) return false;
-    return true;
-  });
-
-  // Find values for each rawData item
-  rawDataItems.forEach(item => {
-    let foundValues = [];
-    for (let i = 0; i < jsonData.length; i++) {
-      const row = jsonData[i];
-      if (!row || row.length === 0) continue;
-      for (let j = 0; j < row.length; j++) {
-        const cell = String(row[j]).trim();
-        if (cell === item) {
-          // Look in same column below
-          for (let k = i + 1; k < jsonData.length; k++) {
-            const valueRow = jsonData[k];
-            if (valueRow && j < valueRow.length) {
-              const numValue = parseFloat(valueRow[j]);
-              if (!isNaN(numValue) && numValue > 0) {
-                foundValues.push({ value: numValue, row: k, col: j });
-              }
-            }
-          }
-          // Try next column
-          if (j + 1 < row.length) {
-            const nextColValue = parseFloat(row[j + 1]);
-            if (!isNaN(nextColValue) && nextColValue > 0) {
-              foundValues.push({ value: nextColValue, row: i, col: j + 1 });
-            }
-          }
-        }
-      }
-    }
-    if (foundValues.length > 0) {
-      const latestValue = foundValues.sort((a, b) => b.row - a.row)[0];
-      const existingValues = Object.values(dynamicData);
-      if (!existingValues.includes(latestValue.value)) {
-        dynamicData[item] = latestValue.value;
-      }
-    }
-  });
-
-  return {
-    filename: filename,
-    uploadedAt: uploadedAt.toISOString(),
-    sheetNames: workbook.SheetNames,
-    heartData: heartData,
-    rawData: rawDataItems,
-    dynamicData: dynamicData,
-    parsedAt: new Date().toISOString()
-  };
-}
-
-// Helper function to extract heart data from Excel
-function extractHeartData(jsonData) {
-  const heartData = {
-    heartRate: null,
-    systolicBP: null,
-    diastolicBP: null,
-    cholesterolLDL: null,
-    heartRateOverTime: [],
-    bloodPressureData: [],
-    ecgData: [],
-    hrvData: []
-  };
-
-  const patterns = {
-    heartRate: /(?:hjärtfrekvens|heart[\s-]*rate|puls|pulse|hr\b)/i,
-    systolic: /(?:systolisk|systolic|sys\b|övre[\s-]*blodtryck|upper[\s-]*bp)/i,
-    diastolic: /(?:diastolisk|diastolic|dia\b|nedre[\s-]*blodtryck|lower[\s-]*bp)/i,
-    cholesterol: /(?:kolesterol|cholesterol|ldl\b)/i
-  };
-
-  const findValueNearLabel = (row, colIndex, nextRow) => {
-    if (colIndex + 1 < row.length) {
-      const val = parseFloat(row[colIndex + 1]);
-      if (!isNaN(val)) return val;
-    }
-    if (nextRow && colIndex < nextRow.length) {
-      const val = parseFloat(nextRow[colIndex]);
-      if (!isNaN(val)) return val;
-    }
-    return null;
-  };
-
-  for (let i = 0; i < jsonData.length; i++) {
-    const row = jsonData[i];
-    const nextRow = i + 1 < jsonData.length ? jsonData[i + 1] : null;
-    if (!row || row.length === 0) continue;
-
-    for (let j = 0; j < row.length; j++) {
-      const cell = String(row[j]).trim();
-      if (!cell) continue;
-
-      if (patterns.heartRate.test(cell) && !heartData.heartRate) {
-        const value = findValueNearLabel(row, j, nextRow);
-        if (value !== null && value > 0 && value < 300) {
-          heartData.heartRate = Math.round(value);
-        }
-      }
-
-      if (patterns.systolic.test(cell) && !heartData.systolicBP) {
-        const value = findValueNearLabel(row, j, nextRow);
-        if (value !== null && value > 0 && value < 300) {
-          heartData.systolicBP = Math.round(value);
-        }
-      }
-
-      if (patterns.diastolic.test(cell) && !heartData.diastolicBP) {
-        const value = findValueNearLabel(row, j, nextRow);
-        if (value !== null && value > 0 && value < 200) {
-          heartData.diastolicBP = Math.round(value);
-        }
-      }
-
-      if (patterns.cholesterol.test(cell) && !heartData.cholesterolLDL) {
-        const value = findValueNearLabel(row, j, nextRow);
-        if (value !== null && value > 0 && value < 20) {
-          heartData.cholesterolLDL = value.toFixed(1);
-        }
-      }
-
-      // Handle blood pressure in "120/80" format
-      const bpMatch = cell.match(/(\d{2,3})\s*[\/\-]\s*(\d{2,3})/);
-      if (bpMatch && (!heartData.systolicBP || !heartData.diastolicBP)) {
-        const sys = parseInt(bpMatch[1]);
-        const dia = parseInt(bpMatch[2]);
-        if (sys > 60 && sys < 300 && dia > 40 && dia < 200) {
-          if (!heartData.systolicBP) heartData.systolicBP = sys;
-          if (!heartData.diastolicBP) heartData.diastolicBP = dia;
-        }
-      }
-    }
-  }
-
-  return heartData;
-}
-
-// Helper function for fallback Excel content
-function createFallbackExcelContent(excelFile) {
-  return {
-    filename: excelFile.name,
-    uploadedAt: new Date(excelFile.uploadedAt || Date.now()).toISOString(),
-    sheetNames: [],
-    heartData: {
-      heartRate: null,
-      systolicBP: null,
-      diastolicBP: null,
-      cholesterolLDL: null,
-      heartRateOverTime: [],
-      bloodPressureData: [],
-      ecgData: [],
-      hrvData: []
-    },
-    error: 'Excel file could not be parsed automatically',
-    parsedAt: new Date().toISOString()
-  };
-}
 
 // 7) Cancel transfer
 app.post("/cancel/:transferId", (req, res) => {
@@ -1221,6 +1234,7 @@ app.post("/cancel/:transferId", (req, res) => {
   if (!t) return res.status(404).json({ error: "Transfer not found" });
   
   t.status = "cancelled";
+  removeSessionCodeForTransfer(transferId);
   broadcast(transferId, { type: "status", status: "cancelled" });
   broadcast(transferId, { type: "cancelled" });
   endStream(transferId);
@@ -1361,6 +1375,48 @@ function endStream(transferId) {
   clients.delete(transferId);
 }
 
+function preloadExcelContent(transferId, meta) {
+  if (!meta || !transferId) return;
+  const name = meta.name || '';
+  const isExcel =
+    meta.mimetype === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    meta.mimetype === "application/vnd.ms-excel" ||
+    name.toLowerCase().endsWith(".xlsx") ||
+    name.toLowerCase().endsWith(".xls");
+  if (!isExcel) return;
+  const cacheKey = getExcelCacheKey(transferId, name);
+  const cached = excelContentCache.get(cacheKey);
+  if (cached && cached.uploadedAt === meta.uploadedAt) return;
+  const filePath = path.join(uploadsRoot, transferId, name);
+  if (!fs.existsSync(filePath)) return;
+  runExcelParser(filePath, meta)
+    .then(data => {
+      excelContentCache.set(cacheKey, { uploadedAt: meta.uploadedAt, data });
+    })
+    .catch(err => console.error("Failed to preload Excel content:", err));
+}
+
+function runExcelParser(filePath, meta) {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('./workers/excelParser.js', import.meta.url), {
+      workerData: { filePath, meta }
+    });
+    worker.once('message', (msg) => {
+      if (msg && msg.success) {
+        resolve(msg.data);
+      } else {
+        reject(new Error(msg?.error || 'Excel parser worker failed'));
+      }
+    });
+    worker.once('error', reject);
+    worker.once('exit', (code) => {
+      if (code !== 0) {
+        reject(new Error(`Excel parser worker exited with code ${code}`));
+      }
+    });
+  });
+}
+
 // Clean up expired transfers every 5 minutes
 setInterval(() => {
   const now = Date.now();
@@ -1369,6 +1425,11 @@ setInterval(() => {
     if (now - transfer.createdAt > 30 * 60 * 1000) {
       transfers.delete(id);
       endStream(id);
+    }
+  }
+  for (const [code, data] of sessionCodes.entries()) {
+    if (now - data.createdAt > SESSION_CODE_TTL) {
+      sessionCodes.delete(code);
     }
   }
 }, 5 * 60 * 1000);

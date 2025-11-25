@@ -6,702 +6,1024 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>MMDCare - Mobil uppladdning</title>
+    <title>MMDCare – Mobil identifiering & uppladdning</title>
     <style>
         body {
-            font-family: system-ui, -apple-system, sans-serif;
-            padding: 16px;
-            background: #f9fafb;
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
+            padding: 24px 16px 40px;
+            background: #F0F2F5;
+            color: #1D212B;
         }
-        
-        .card {
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 24px;
-            background: white;
-            max-width: 400px;
-            margin: 2rem auto;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        .page-shell {
+            max-width: 520px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
-        
-        .header {
+        header {
             text-align: center;
-            margin-bottom: 24px;
+            padding: 12px 16px 6px;
         }
-        
-        .logo {
-            width: 40px;
-            height: 40px;
-            margin-bottom: 12px;
+        header img {
+            width: 48px;
+            height: 48px;
             object-fit: contain;
-            filter: brightness(0) saturate(100%) invert(8%) sepia(8%) saturate(2000%) hue-rotate(200deg) brightness(0.9) contrast(1.1);
+            margin-bottom: 10px;
+            filter: brightness(0) saturate(100%) invert(15%) sepia(9%) saturate(3225%) hue-rotate(192deg) brightness(90%) contrast(96%);
         }
-        
-        h1 {
-            font-size: 24px;
+        header h1 {
+            margin: 8px 0 0 0;
+            font-size: 22px;
             font-weight: 600;
-            color: #1f2937;
+            color: #111827;
+        }
+        header p {
+            margin: 6px 0 0;
+            color: #4B5563;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        .card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            border: 1px solid #E5E7EB;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .patient-session-banner {
+            background: #0F172A;
+            color: white;
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .patient-session-banner .banner-label {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .patient-session-banner .banner-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .patient-session-banner .banner-value.expired {
+            color: #DC2626;
+        }
+        .mobile-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.65);
+    display: none;
+    align-items: center;
+    justify-content: center;
+            padding: 32px 16px;
+    z-index: 3000;
+            box-sizing: border-box;
+}
+.mobile-overlay.show {
+    display: flex;
+}
+        .mobile-modal {
+    background: #FFFFFF;
+    border-radius: 20px;
+    padding: 24px;
+            width: min(520px, calc(100vw - 32px));
+            max-width: 520px;
+            box-sizing: border-box;
+    box-shadow: 0 25px 60px rgba(15, 23, 42, 0.35);
+            word-break: break-word;
+            margin: 0 auto;
+}
+.mobile-modal h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #0F172A;
+    text-align: center;
+}
+        .mobile-modal p {
+    margin: 0;
+    color: #6B7280;
+    font-size: 15px;
+    text-align: center;
+            line-height: 1.4;
+}
+.mobile-modal-actions {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.mobile-modal-actions button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+}
+.mobile-modal-cancel {
+    background: #F3F4F6;
+    color: #111827;
+}
+.mobile-modal-confirm {
+    background: #FF4400;
+    color: #FFFFFF;
+}
+        .step-card {
+            display: none;
+        }
+        .step-card.active {
+            display: flex;
+            animation: fadeStep 0.25s ease forwards;
+            scroll-margin-top: 0;
+        }
+        @keyframes fadeStep {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .card h2 {
+            margin: 0;
+            font-size: 18px;
+            color: #111827;
+        }
+        .card p {
             margin: 0;
         }
-        
-        .subtitle {
-            color: #6b7280;
+        .card h2 + p {
+            margin-top: 4px;
+        }
+        label {
             font-size: 14px;
-            margin-top: 8px;
+            font-weight: 600;
+            color: #1F2937;
         }
-        
-        button {
-            padding: 12px 24px;
-            border-radius: 12px;
-            border: none;
-            background: #1d4ed8;
-            color: white;
-            font-weight: 500;
-            cursor: pointer;
+        input[type="text"] {
             width: 100%;
-            margin-top: 16px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid #D1D5DB;
             font-size: 16px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            background: #FFFFFF;
+            box-sizing: border-box;
+            display: block;
         }
-        
-        button:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
+        #codeForm {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
-        
-        input[type=file] {
-            display: none; /* Dölj standardknappen och texten "No file chosen" */
+        button {
+            border: none;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.2s ease;
+        }
+        .btn-primary {
+            background: #1D4ED8;
+            color: #FFFFFF;
+        }
+        .btn-primary:hover {
+            background: #1E40AF;
+        }
+        .btn-secondary {
+            background: #FFFFFF;
+            color: #1D4ED8;
+            border: 1px solid #CBD5F5;
+        }
+        .btn-secondary:hover {
+            background: #F3F4F6;
+        }
+        .hint {
+            font-size: 13px;
+            color: #6B7280;
+            margin-top: -6px;
+        }
+        .step-chip {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #6B7280;
+        }
+        .info-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .info-list li {
+            display: flex;
+            gap: 10px;
+            font-size: 14px;
+            color: #374151;
+        }
+        .info-list li::before {
+            content: "•";
+            color: #9CA3AF;
+            font-weight: 600;
+        }
+        .status-line {
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-line.waiting {
+            background: #FDF6B2;
+            color: #92400E;
+        }
+        .status-line.success {
+            background: #DEF7EC;
+            color: #065F46;
+        }
+        .status-line.info {
+            background: #DBEAFE;
+            color: #1E3A8A;
+        }
+        .loading-inline {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: #4B5563;
+        }
+        .dot-pulse {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #2563EB;
+            display: inline-block;
+            animation: pulse 0.9s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0.6; }
+            50% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.6; }
+        }
+        .session-toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #0F172A;
+            color: white;
+            padding: 12px 18px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 14px;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.35);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            width: min(520px, calc(100vw - 32px));
+            box-sizing: border-box;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .session-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        .session-toast .toast-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #10B981;
+        }
+        .session-toast.info .toast-indicator {
+            background: #2563EB;
         }
         .file-picker {
             display: flex;
-            flex-direction: column; /* Lägg status under knappen */
-            gap: 6px;
-            align-items: flex-start;
-            margin: 16px 0;
+            flex-direction: column;
+            gap: 8px;
         }
         .choose-btn {
-            padding: 10px 16px;
-            border-radius: 10px;
-            border: 1px solid #d1d5db;
-            background: #fff;
-            color: #111827;
-            font-weight: 500;
-            display: inline-flex;           /* Placera ikon och text horisontellt */
-            align-items: center;
-            justify-content: center;        /* Centrera ikon + text */
-            gap: 8px;                        /* Avstånd mellan ikon och text */
-            width: 100%;
-        }
-        .file-status {
-            color: #6b7280;
-            font-size: 14px;
-        }
-        .selected-files {
-            margin-top: 8px;
-            width: 100%;
-        }
-        .selected-header {
-            background: #f3f4f6;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 12px 14px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            user-select: none;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px dashed #D1D5DB;
+            background: #F9FAFB;
+            font-size: 15px;
             font-weight: 600;
-            color: #374151;
+            color: #111827;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
         }
-        .chevron {
-            transition: transform .2s ease;
-        }
-        .expanded .chevron {
-            transform: rotate(90deg);
-        }
-        .selected-list {
+        .selected-files, .uploaded-files {
             margin-top: 8px;
-            display: none;
         }
-        .selected-list.show { display: block; }
         .selected-file-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
             padding: 10px 12px;
-            margin-bottom: 8px;
             font-size: 14px;
-            color: #374151;
+            color: #1F2937;
+            background: #FFFFFF;
         }
-        
-        .hint {
-            color: #6b7280;
-            font-size: 14px;
-            text-align: center;
-            margin-bottom: 16px;
-        }
-        
         .status {
             text-align: center;
-            margin-top: 16px;
-            font-weight: 500;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 12px;
+            display: none;
         }
-        
-        .success {
+        .status.show {
+            display: block;
+        }
+        .status.success {
             color: #059669;
         }
-        
-        .error {
-            color: #dc2626;
+        .status.error {
+            color: #DC2626;
         }
-        
-        .progress {
-            color: #1d4ed8;
+        .status.progress {
+            color: #1D4ED8;
         }
-        
-        .file-info {
-            background: #f3f4f6;
-            padding: 8px 12px;
-            border-radius: 6px;
-            margin: 8px 0;
-            font-size: 14px;
+        input[type="file"] {
+            display: none;
         }
-
-        .patient-selector {
-            margin-bottom: 24px;
-        }
-
-        .patient-selector label {
-            display: block;
-            font-size: 14px;
-            font-weight: 500;
-            color: #374151;
-            margin-bottom: 8px;
-        }
-
-        .patient-selector select {
+        .end-session-btn {
+            margin-top: 16px;
             width: 100%;
-            padding: 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 10px;
-            font-size: 16px;
-            background: white;
-            color: #1f2937;
-            cursor: pointer;
+            border: none;
+            border-radius: 12px;
+            background: #FF4400;
+            color: #fff;
+            font-weight: 600;
         }
-
-        .patient-selector select:focus {
-            outline: none;
-            border-color: #1d4ed8;
-            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+        .end-session-btn:disabled {
+            opacity: 0.6;
+            background: #FF4400;
+        }
+        @media (max-width: 400px) {
+            button {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="card">
-        <div class="header">
-            <img src="/Assets/mmdconnect.png" alt="MMDCare" class="logo">
-            <h1>Dela hälsodokument</h1>
-            <p class="subtitle">Ladda upp dina hälsofiler till MMDCare</p>
-        </div>
-        
-        <div class="patient-selector">
-            <label for="patientSelect">Välj patient:</label>
-            <select id="patientSelect">
-                <option value="">-- Välj patient --</option>
-                <option value="anders-boman">Anders Boman</option>
-                <option value="markus-selin">Markus Selin</option>
-                <option value="samuel-oldmark">Samuel Oldmark</option>
-            </select>
-        </div>
-        
-        <p class="hint">Välj PDF- eller Excel (XLSX)-filer. Max 100 MB per fil.</p>
-        <div class="file-picker">
-            <button id="chooseBtn" type="button" class="choose-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M12 5v14M5 12h14" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Välj filer
+    <div class="page-shell">
+        <header>
+            <span class="logo-text" style="font-size:14px;font-weight:600;color:#9CA3AF;letter-spacing:0.08em;margin-bottom:12px;">MMDCARE</span>
+            <h1>Dela filer till din läkare</h1>
+            <p>Sessionen speglar dina filer direkt till läkaren. Inget lagras efteråt och åtkomsten loggas för juridikens skull.</p>
+        </header>
+
+        <section class="card step-card active" id="codeCard">
+            <div class="step-chip">Steg 1 · Ange koden</div>
+            <h2>Påbörja din identifiering</h2>
+            <label for="sessionCodeInput">6-siffrig kod från webplattformen</label>
+            <form id="codeForm">
+                <input type="text" id="sessionCodeInput" name="sessionCode" placeholder="123-456" autocomplete="one-time-code" inputmode="numeric" maxlength="7" required>
+                <button class="btn-primary" type="submit">Starta session</button>
+            </form>
+            <p class="hint" id="codeHint">Koden kopplar dig till rätt läkare och startar samtyckesflödet.</p>
+            <div class="loading-inline" id="codeLoadingIndicator" style="display:none;">
+                <span class="dot-pulse"></span>
+                <span>Hämtar session...</span>
+            </div>
+        </section>
+
+        <section class="card step-card" id="consentCard">
+            <div class="step-chip">Steg 2 · Läs igenom</div>
+            <h2>Du godkänner att dela</h2>
+            <p>Din session gäller i högst 45 minuter och loggas enligt PDL.</p>
+            <ul class="info-list">
+                <li id="summaryDoctor">Läkare: –</li>
+                <li id="summaryPatient">Du styr vad som delas. Data speglas endast i RAM och raderas när sessionen stängs.</li>
+                <li>Ingen data sparas i plattformen – endast åtkomsten loggas i 5 år.</li>
+            </ul>
+            <button class="btn-primary" id="consentButton">Jag förstår och vill gå vidare</button>
+        </section>
+
+        <section class="card step-card" id="bankIdCard">
+            <div class="step-chip">Steg 3 · Legitimation</div>
+            <h2>Identifiera dig med BankID</h2>
+            <p>Vi verifierar att du är rätt patient innan uppladdningen öppnas.</p>
+            <button class="btn-primary" id="bankIdButton">
+                <img src="/Assets/BankID.png" alt="BankID" style="width:32px;height:32px;object-fit:contain;">
+                Identifiera med BankID
             </button>
-            <span id="fileSelectionStatus" class="file-status">Ingen fil vald</span>
+            <div class="status-line waiting" id="bankIdStatus">Väntar på att du startar BankID...</div>
+        </section>
+
+        <section class="card step-card" id="waitCard">
+            <div class="step-chip">Steg 4 · Vänta på läkaren</div>
+            <h2>BankID klart</h2>
+            <p>Nu inväntar vi att läkaren legitimerar sig med SITHS för att öppna uppladdningen.</p>
+            <div class="status-line info" id="waitStatus">Väntar på att läkaren legitimerar sig ...</div>
+        </section>
+
+        <div class="patient-session-banner" style="display:none;" id="patientTimerBanner">
+            <span class="banner-label">Sessionstid kvar</span>
+            <span id="patientSessionTimerValue" class="banner-value">Session ej startad</span>
         </div>
-        <div id="selectedFilesContainer" class="selected-files"></div>
-        <div id="uploadedFilesSection" style="display: none; margin-bottom: 24px;">
-            <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 12px;">Uppladdade filer</h3>
-            <div id="uploadedFilesList" class="selected-files"></div>
+        <section class="card step-card" id="uploadCard">
+            <h2>Dela dina filer</h2>
+            <p>Läkaren är inne på plattformen. Dina dokument speglas direkt och raderas efter sessionen.</p>
+            <div class="file-picker">
+                <button id="chooseBtn" type="button" class="choose-btn" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M12 5v14M5 12h14" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Välj filer
+                </button>
+                <span id="fileSelectionStatus" class="hint" style="margin-top:8px;">Ingen fil vald</span>
+            </div>
+            <div id="selectedFilesContainer" class="selected-files"></div>
+            <div id="uploadedFilesSection" class="uploaded-files" style="display:none;">
+                <h3 style="margin:8px 0 4px;font-size:15px;">Uppladdade filer</h3>
+                <div id="uploadedFilesList"></div>
+            </div>
+            <input id="fileInput" type="file" multiple accept=".pdf,application/pdf,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+            <button id="uploadBtn" class="btn-primary" disabled>Ladda upp</button>
+            <div id="status" class="status"></div>
+            <div id="fileList"></div>
+        </section>
+        <button id="endSessionBtn" class="logout-btn-confirm end-session-btn" style="display:none;" disabled type="button">Avsluta session</button>
+    <div class="mobile-overlay" id="mobileEndOverlay">
+        <div class="mobile-modal">
+            <h3>Avsluta session</h3>
+            <p>Är du säker på att du vill avsluta sessionen?</p>
+            <div class="mobile-modal-actions">
+                <button type="button" class="mobile-modal-cancel" id="mobileOverlayCancel">Avbryt</button>
+                <button type="button" class="mobile-modal-confirm" id="mobileOverlayConfirm">Avsluta session</button>
+            </div>
         </div>
-        <input id="fileInput" type="file" multiple accept=".pdf,application/pdf,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
-        <button id="uploadBtn">Ladda upp filer</button>
-        <div id="status" class="status"></div>
-        <div id="fileList"></div>
+    </div>
+
+    </div>
+    <div id="sessionToast" class="session-toast" role="status" aria-live="polite">
+        <span class="toast-indicator"></span>
+        <span id="sessionToastText"></span>
     </div>
 
     <script>
-        const fileInput = document.getElementById('fileInput');
-        const chooseBtn = document.getElementById('chooseBtn');
-        const fileSelectionStatus = document.getElementById('fileSelectionStatus');
-        const selectedFilesContainer = document.getElementById('selectedFilesContainer');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const status = document.getElementById('status');
-        const fileList = document.getElementById('fileList');
-        const patientSelect = document.getElementById('patientSelect');
+        const selectors = {
+            codeForm: document.getElementById('codeForm'),
+            sessionCodeInput: document.getElementById('sessionCodeInput'),
+            codeHint: document.getElementById('codeHint'),
+            codeButton: document.querySelector('#codeForm button[type="submit"]'),
+            codeLoadingIndicator: document.getElementById('codeLoadingIndicator'),
+            consentButton: document.getElementById('consentButton'),
+            summaryDoctor: document.getElementById('summaryDoctor'),
+            summaryPatient: document.getElementById('summaryPatient'),
+            bankIdButton: document.getElementById('bankIdButton'),
+            bankIdStatus: document.getElementById('bankIdStatus'),
+            waitStatus: document.getElementById('waitStatus'),
+            uploadCard: document.getElementById('uploadCard'),
+            chooseBtn: document.getElementById('chooseBtn'),
+            fileSelectionStatus: document.getElementById('fileSelectionStatus'),
+            selectedFilesContainer: document.getElementById('selectedFilesContainer'),
+            uploadedFilesSection: document.getElementById('uploadedFilesSection'),
+            uploadedFilesList: document.getElementById('uploadedFilesList'),
+            fileInput: document.getElementById('fileInput'),
+            uploadBtn: document.getElementById('uploadBtn'),
+            status: document.getElementById('status'),
+            fileList: document.getElementById('fileList'),
+            patientTimerValue: document.getElementById('patientSessionTimerValue'),
+            endSessionButton: document.getElementById('endSessionBtn'),
+            toast: document.getElementById('sessionToast'),
+            toastText: document.getElementById('sessionToastText'),
+            mobileOverlay: document.getElementById('mobileEndOverlay'),
+            mobileOverlayCancel: document.getElementById('mobileOverlayCancel'),
+            mobileOverlayConfirm: document.getElementById('mobileOverlayConfirm')
+        };
 
-        let transferId = null;
-        let uploadedFiles = []; // Track all uploaded files
-        let hasUploaded = false; // Track if at least one upload has been completed
+        const stepIds = ['codeCard', 'consentCard', 'bankIdCard', 'waitCard', 'uploadCard'];
 
-        // Patient list - must match the one in index.html
-        const patients = [
-            { name: 'Anders Boman', id: 'anders-boman' },
-            { name: 'Markus Selin', id: 'markus-selin' },
-            { name: 'Samuel Oldmark', id: 'samuel-oldmark' }
-        ];
+        const state = {
+            transferId: null,
+            sessionCode: null,
+            patientAlias: 'Patient',
+            doctorName: 'Din läkare',
+            uploadedFiles: [],
+            hasUploaded: false,
+            currentStep: 'codeCard',
+            doctorVerified: false,
+            sessionExpiresAt: null
+        };
 
-        // Get transfer ID from URL parameters (for backward compatibility with QR code)
-        const urlParams = new URLSearchParams(window.location.search);
-        const urlTransferId = urlParams.get('transferId');
+        const SESSION_TTL_MS = 45 * 60 * 1000;
 
-        if (urlTransferId) {
-            // QR code flow - use transferId from URL (backward compatibility)
-            transferId = urlTransferId;
-            patientSelect.style.display = 'none';
-            patientSelect.parentElement.style.display = 'none';
-            uploadBtn.disabled = false;
-            status.textContent = "";
-            status.className = "status";
-        } else {
-            // Patient selection flow - require patient selection
-            uploadBtn.disabled = true;
-            status.textContent = ""; // No error message initially
-            status.className = "status";
-            patientSelect.addEventListener('change', handlePatientSelection);
+        let doctorPollId = null;
+        let sessionPollId = null;
+        let toastTimeout = null;
+        let patientTimerInterval = null;
+
+        selectors.codeForm.addEventListener('submit', handleCodeSubmit);
+        selectors.consentButton.addEventListener('click', handleConsentProceed);
+        selectors.bankIdButton.addEventListener('click', simulateBankId);
+        selectors.chooseBtn.addEventListener('click', () => selectors.fileInput.click());
+        selectors.fileInput.addEventListener('change', handleFileSelection);
+        selectors.uploadBtn.addEventListener('click', uploadSelectedFiles);
+        if (selectors.endSessionButton) {
+            selectors.endSessionButton.addEventListener('click', openMobileEndOverlay);
+        }
+        if (selectors.mobileOverlayCancel) {
+            selectors.mobileOverlayCancel.addEventListener('click', closeMobileEndOverlay);
+        }
+        if (selectors.mobileOverlayConfirm) {
+            selectors.mobileOverlayConfirm.addEventListener('click', () => endPatientSession());
+        }
+        if (selectors.mobileOverlay) {
+            selectors.mobileOverlay.addEventListener('click', (event) => {
+                if (event.target === selectors.mobileOverlay) {
+                    closeMobileEndOverlay();
+                }
+            });
         }
 
-        async function handlePatientSelection() {
-            const selectedPatientId = patientSelect.value;
-            
-            if (!selectedPatientId) {
-                transferId = null;
-                uploadBtn.disabled = true;
-                status.textContent = "Välj en patient för att fortsätta.";
-                status.className = "status error";
+        togglePatientSessionUI(false);
+
+        function goToStep(stepId) {
+            if (!stepIds.includes(stepId)) return;
+            stepIds.forEach(id => {
+                const card = document.getElementById(id);
+                if (!card) return;
+                card.classList.toggle('active', id === stepId);
+            });
+            if (stepId !== 'uploadCard') {
+                togglePatientSessionUI(false);
+            }
+            state.currentStep = stepId;
+        }
+
+        async function handleCodeSubmit(event) {
+            event.preventDefault();
+            const rawCode = selectors.sessionCodeInput.value.trim();
+            const normalized = normalizeCode(rawCode);
+            if (!normalized) {
+                setCodeError('Ange hela koden.');
                 return;
             }
-
-            // Try to get existing transferId for this patient from the server
-            // This will work even if the doctor created it on a different device
+            setCodeLoading(true);
             try {
-                uploadBtn.disabled = true;
-
-                // Get existing transfer ID for this patient (created by web page)
-                // This ensures mobile and web use the SAME transfer ID
-                console.log('Getting transfer ID for patient:', selectedPatientId);
-                const getResponse = await fetch(`/api/transfers?patientId=${selectedPatientId}`, {
-                    cache: 'no-store'
-                });
-                
-                if (getResponse.ok) {
-                    const data = await getResponse.json();
-                    transferId = data.transferId;
-                    if (data.existing) {
-                        console.log('Using existing transfer ID for patient:', selectedPatientId, transferId);
-                    } else {
-                        console.log('Created new transfer ID for patient:', selectedPatientId, transferId);
-                    }
-                } else {
-                    // If GET fails, try POST as fallback
-                    console.log('GET failed, creating new transfer via POST');
-                    const postResponse = await fetch('/api/transfers', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ patientId: selectedPatientId })
-                    });
-                    
-                    if (postResponse.ok) {
-                        const data = await postResponse.json();
-                        transferId = data.transferId;
-                        console.log('Created NEW transfer ID for patient (POST fallback):', selectedPatientId, transferId);
-                    } else {
-                        const errorText = await postResponse.text();
-                        console.error('Failed to create transfer:', errorText);
-                        throw new Error('Kunde inte skapa överföringssession');
-                    }
+                const session = await lookupSession(normalized);
+                if (!session) {
+                    setCodeError('Koden hittades inte. Be din läkare skapa en ny.');
+                    return;
                 }
-
-                // Store in localStorage for local reference
-                localStorage.setItem(`patient_transfer_${selectedPatientId}`, transferId);
-                
-                // Also store patient info with transferId
-                const patient = patients.find(p => p.id === selectedPatientId);
-                if (patient) {
-                    localStorage.setItem(`transfer_patient_${transferId}`, JSON.stringify({
-                        patientId: selectedPatientId,
-                        patientName: patient.name
-                    }));
-                }
-
-                uploadBtn.disabled = false;
-                status.textContent = "";
-                status.className = "status";
-                
-                // CRITICAL: Clear all old uploaded files when patient is selected
-                // This ensures mobile page starts fresh after doctor logout
-                uploadedFiles = [];
-                hasUploaded = false;
-                updateUploadedFilesDisplay();
-                
-                // Clear old localStorage data for this patient
-                const oldTransferId = localStorage.getItem(`patient_transfer_${selectedPatientId}`);
-                if (oldTransferId && oldTransferId !== transferId) {
-                    localStorage.removeItem(`transfer_patient_${oldTransferId}`);
-                    localStorage.removeItem(`mmd_files_${oldTransferId}`);
-                }
-                
-                // Check for existing uploaded files (should be empty for new transfer)
-                await checkExistingUploads();
-                
-                // Ensure transfer is open for new uploads (reopen if closed)
-                if (transferId) {
-                    try {
-                        const statusResponse = await fetch(`/api/complete?transferId=${transferId}`);
-                        if (statusResponse.ok) {
-                            const statusData = await statusResponse.json();
-                            // If transfer has files, it's from an old session - clear it
-                            if (statusData.files && statusData.files.length > 0) {
-                                console.log('Transfer has old files - clearing mobile state');
-                                uploadedFiles = [];
-                                hasUploaded = false;
-                                updateUploadedFilesDisplay();
-                                // Reset button text
-                                chooseBtn.innerHTML = `
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                        <path d="M12 5v14M5 12h14" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    </svg>
-                                    Välj filer
-                                `;
-                            }
-                        }
-                    } catch (e) {
-                        console.error('Error checking transfer status:', e);
-                    }
-                }
+                clearCodeError();
+                state.sessionCode = normalized;
+                state.transferId = session.transferId;
+                state.patientAlias = session.patientAlias || 'Patient';
+                state.doctorName = session.doctorName || 'Din läkare';
+                const createdAt = session.createdAt ? Number(session.createdAt) : Date.now();
+                state.sessionExpiresAt = createdAt + SESSION_TTL_MS;
+                updateConsentSummary();
+                showSessionToast(`Session påbörjad med ${state.doctorName}`, 'success');
+                goToStep('consentCard');
+                updateSessionStage('initiated');
+                startSessionWatch();
             } catch (error) {
-                console.error('Error getting/creating transfer session:', error);
-                status.textContent = `Fel: ${error.message}`;
-                status.className = "status error";
-                uploadBtn.disabled = true;
+                console.error('Failed to fetch session', error);
+                setCodeError('Kunde inte hitta sessionen just nu.');
+            } finally {
+                setCodeLoading(false);
             }
         }
 
-        // Open native picker when clicking custom button
-        chooseBtn.addEventListener('click', function() {
-            fileInput.click();
-        });
+        function setCodeLoading(isLoading) {
+            if (selectors.codeButton) {
+                selectors.codeButton.disabled = isLoading;
+                selectors.codeButton.textContent = isLoading ? 'Hämtar...' : 'Hämta session';
+            }
+            if (selectors.codeLoadingIndicator) {
+                selectors.codeLoadingIndicator.style.display = isLoading ? 'flex' : 'none';
+            }
+        }
 
-        // Display selected files
-        fileInput.addEventListener('change', function() {
-            const files = Array.from(this.files);
-            fileList.innerHTML = '';
-            
-            // Only show selected files in the selectedFilesContainer, not in uploaded files
-            // Clear the selected files container (selected files only, not uploaded files)
-            const selectedFiles = selectedFilesContainer.querySelectorAll('.selected-file-card, .selected-header, .selected-list');
-            selectedFiles.forEach(el => el.remove());
-            
-            if (files.length > 0) {
-                // Render selected files in the selectedFilesContainer (above "Uppladdade filer")
-                renderSelectedFiles(files);
-                // Update status text
-                fileSelectionStatus.textContent = files.length === 1 ? '1 fil vald' : `${files.length} filer valda`;
+        function togglePatientSessionUI(show) {
+            const timerBanner = document.getElementById('patientTimerBanner');
+            if (show) {
+                if (timerBanner) timerBanner.style.display = 'flex';
+                selectors.endSessionButton.style.display = 'block';
+                selectors.endSessionButton.disabled = false;
             } else {
-                fileSelectionStatus.textContent = 'Ingen fil vald';
+                if (timerBanner) timerBanner.style.display = 'none';
+                selectors.endSessionButton.style.display = 'none';
+                selectors.endSessionButton.disabled = true;
             }
-        });
+        }
 
-        function renderSelectedFiles(files) {
-            // Clear selected files container (only selected files, uploaded files are in uploadedFilesSection)
-            const selectedFiles = selectedFilesContainer.querySelectorAll('.selected-file-card, .selected-header, .selected-list');
-            selectedFiles.forEach(el => el.remove());
-            
-            if (files.length === 0) return;
-            if (files.length === 1) {
-                const f = files[0];
-                const card = document.createElement('div');
-                card.className = 'selected-file-card';
-                card.innerHTML = `<strong>${f.name}</strong><br>Storlek: ${Math.round(f.size/1024)} KB · Typ: ${f.type || 'okänd'}`;
-                selectedFilesContainer.appendChild(card);
+        function handleConsentProceed() {
+            selectors.consentButton.disabled = true;
+            goToStep('bankIdCard');
+            updateSessionStage('bankid');
+            selectors.bankIdButton.disabled = false;
+            selectors.bankIdStatus.className = 'status-line waiting';
+            selectors.bankIdStatus.textContent = 'Starta BankID appen på din mobil';
+        }
+
+        function showSessionToast(message, type = 'success') {
+            if (!selectors.toast) return;
+            selectors.toast.classList.remove('success', 'info');
+            selectors.toast.classList.add(type === 'info' ? 'info' : 'success');
+            selectors.toastText.textContent = message;
+            selectors.toast.classList.add('show');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => selectors.toast.classList.remove('show'), 3200);
+        }
+
+        function updateWaitStatus(message, type = 'info') {
+            if (!selectors.waitStatus) return;
+            const cls = type === 'success' ? 'status-line success' : 'status-line info';
+            selectors.waitStatus.className = cls;
+            selectors.waitStatus.textContent = message;
+        }
+
+        function normalizeCode(code) {
+            if (!code) return null;
+            const digits = code.replace(/[^0-9]/g, '');
+            if (digits.length !== 6) return null;
+            return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+        }
+
+        async function lookupSession(code) {
+            try {
+                const res = await fetch(`/api/session-code?code=${encodeURIComponent(code)}`, { cache: 'no-store' });
+                if (!res.ok) return null;
+                return await res.json();
+            } catch (error) {
+                console.error('Failed to lookup session code:', error);
+                return null;
+            }
+        }
+
+        function setCodeError(message) {
+            selectors.codeHint.textContent = message;
+            selectors.codeHint.style.color = '#DC2626';
+        }
+
+        function clearCodeError() {
+            selectors.codeHint.textContent = 'Koden kopplar dig till rätt läkare och startar samtyckesflödet.';
+            selectors.codeHint.style.color = '#475569';
+        }
+
+        function updateConsentSummary() {
+            selectors.summaryDoctor.textContent = `Läkare: ${state.doctorName}`;
+            selectors.summaryPatient.textContent = `${state.patientAlias} delar filer som endast speglas till ${state.doctorName}.`;
+        }
+
+        function simulateBankId() {
+            if (!state.transferId) {
+                setCodeError('Hämta en session innan du legitimerar dig.');
                 return;
             }
+            selectors.bankIdStatus.className = 'status-line waiting';
+            selectors.bankIdStatus.textContent = 'Starta BankID appen på din mobil';
+            selectors.bankIdButton.disabled = true;
+            setTimeout(() => selectors.bankIdStatus.textContent = 'Signera i BankID-appen på din mobil', 1200);
+            setTimeout(() => {
+                selectors.bankIdStatus.className = 'status-line success';
+                selectors.bankIdStatus.textContent = 'Identifiering klar.';
+                persistPatientVerification();
+                updateSessionStage('approved');
+                goToStep('waitCard');
+                updateWaitStatus('BankID klart. Väntar på att läkaren legitimerar sig.', 'info');
+                showSessionToast('BankID klart – inväntar läkaren.', 'info');
+                startDoctorWatch();
+            }, 2800);
+        }
 
-            // Header
-            const header = document.createElement('div');
-            header.className = 'selected-header';
-            header.innerHTML = `<span>Valda filer (${files.length})</span><span class="chevron">›</span>`;
-            selectedFilesContainer.appendChild(header);
+        function persistPatientVerification() {
+            localStorage.setItem('mmd_patient_verification', JSON.stringify({
+                verified: true,
+                method: 'bankid',
+                code: state.sessionCode,
+                verifiedAt: new Date().toISOString()
+            }));
+            localStorage.setItem('currentTransferId', state.transferId);
+            localStorage.setItem('currentPatientName', state.patientAlias || 'Patient');
+        }
 
-            // List
-            const list = document.createElement('div');
-            list.className = 'selected-list';
-            files.forEach(f => {
+        async function updateSessionStage(stage) {
+            if (!state.sessionCode) return;
+            try {
+                await fetch('/api/session-code/stage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: state.sessionCode, stage })
+                });
+            } catch (error) {
+                console.error('Failed to update session stage:', error);
+            }
+        }
+
+        function startDoctorWatch() {
+            if (doctorPollId || !state.sessionCode) return;
+            doctorPollId = setInterval(checkDoctorStatus, 3000);
+            checkDoctorStatus();
+        }
+
+        async function checkDoctorStatus() {
+            if (!state.sessionCode) return;
+            const session = await lookupSession(state.sessionCode);
+            if (!session) return;
+            if (session.doctorVerified && !state.doctorVerified) {
+                state.doctorVerified = true;
+                stopDoctorWatch();
+                updateWaitStatus('Läkaren är inne – uppladdningen öppnas nu.', 'success');
+                showSessionToast('Läkaren är redo – du kan ladda upp filer.', 'success');
+                openUploadCard();
+            }
+        }
+
+        function stopDoctorWatch() {
+            if (doctorPollId) {
+                clearInterval(doctorPollId);
+                doctorPollId = null;
+            }
+        }
+
+        function startSessionWatch() {
+            if (sessionPollId || !state.sessionCode) return;
+            sessionPollId = setInterval(checkSessionState, 4000);
+            checkSessionState();
+        }
+
+        function stopSessionWatch() {
+            if (sessionPollId) {
+                clearInterval(sessionPollId);
+                sessionPollId = null;
+            }
+        }
+
+        function startPatientTimer() {
+            if (!state.sessionExpiresAt || !selectors.patientTimerValue) return;
+            updatePatientTimer();
+            if (patientTimerInterval) clearInterval(patientTimerInterval);
+            patientTimerInterval = setInterval(updatePatientTimer, 1000);
+            selectors.patientTimerValue.classList.remove('expired');
+        }
+
+        function updatePatientTimer() {
+            if (!selectors.patientTimerValue || !state.sessionExpiresAt) return;
+            const remaining = state.sessionExpiresAt - Date.now();
+            if (remaining <= 0) {
+                selectors.patientTimerValue.textContent = 'Sessionen har gått ut';
+                selectors.patientTimerValue.classList.add('expired');
+                stopPatientTimer();
+                endPatientSession(true);
+                return;
+            }
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000).toString().padStart(2, '0');
+            selectors.patientTimerValue.textContent = `${minutes} min ${seconds} sek`;
+        }
+
+        function stopPatientTimer() {
+            if (patientTimerInterval) {
+                clearInterval(patientTimerInterval);
+                patientTimerInterval = null;
+            }
+        }
+
+        async function checkSessionState() {
+            if (!state.sessionCode) return;
+            const session = await lookupSession(state.sessionCode);
+            if (session && session.createdAt && !state.sessionExpiresAt) {
+                state.sessionExpiresAt = Number(session.createdAt) + SESSION_TTL_MS;
+            }
+            if (!session || session.stage === 'cancelled') {
+                handleSessionCancelled();
+                return;
+            }
+            if (session.doctorVerified && state.currentStep !== 'uploadCard') {
+                state.doctorVerified = true;
+                updateWaitStatus('Läkaren är inne – uppladdningen öppnas nu.', 'success');
+                showSessionToast('Läkaren är redo – du kan ladda upp filer.', 'success');
+                openUploadCard();
+            }
+        }
+
+        function handleSessionCancelled(byPatient = false) {
+            showSessionToast(byPatient ? 'Du har avslutat sessionen' : 'Läkaren har avslutat sessionen', 'info');
+            stopPatientTimer();
+            resetFlowToStart();
+        }
+
+        function openMobileEndOverlay(event) {
+            if (event) event.preventDefault();
+            const overlay = selectors.mobileOverlay || document.getElementById('mobileEndOverlay');
+            if (overlay) {
+                overlay.classList.add('show');
+                document.body.style.overflow = 'hidden';
+                document.body.style.touchAction = 'none';
+            }
+        }
+
+        function closeMobileEndOverlay() {
+            const overlay = selectors.mobileOverlay || document.getElementById('mobileEndOverlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+            }
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+        }
+
+        async function endPatientSession(force = false) {
+            if (!state.transferId) return;
+            closeMobileEndOverlay();
+            if (!force) {
+                selectors.endSessionButton.disabled = true;
+                selectors.endSessionButton.textContent = 'Avslutar...';
+            }
+            try {
+                await fetch(`/cancel/${state.transferId}`, { method: 'POST' });
+            } catch (error) {
+                console.error('Failed to end session:', error);
+            } finally {
+                handleSessionCancelled(true);
+                if (!force) {
+                    selectors.endSessionButton.disabled = false;
+                    selectors.endSessionButton.textContent = 'Avsluta session';
+                }
+            }
+        }
+
+        function resetFlowToStart() {
+            stopDoctorWatch();
+            stopSessionWatch();
+            stopPatientTimer();
+            state.transferId = null;
+            state.sessionCode = null;
+            state.patientAlias = 'Patient';
+            state.doctorName = 'Din läkare';
+            state.uploadedFiles = [];
+            state.hasUploaded = false;
+            state.currentStep = 'codeCard';
+            state.sessionExpiresAt = null;
+            selectors.sessionCodeInput.value = '';
+            selectors.codeButton.disabled = false;
+            selectors.codeButton.textContent = 'Starta session';
+            selectors.consentButton.disabled = false;
+            selectors.bankIdButton.disabled = true;
+            selectors.bankIdStatus.className = 'status-line waiting';
+            selectors.bankIdStatus.textContent = 'Väntar på att du startar BankID...';
+            selectors.waitStatus.className = 'status-line info';
+            selectors.waitStatus.textContent = 'Väntar på att läkaren legitimerar sig ...';
+            selectors.chooseBtn.disabled = true;
+            selectors.uploadBtn.disabled = true;
+            selectors.fileSelectionStatus.textContent = 'Ingen fil vald';
+            selectors.selectedFilesContainer.innerHTML = '';
+            selectors.uploadedFilesSection.style.display = 'none';
+            togglePatientSessionUI(false);
+            if (selectors.patientTimerValue) {
+                selectors.patientTimerValue.textContent = 'Session ej startad';
+                selectors.patientTimerValue.classList.remove('expired');
+            }
+            localStorage.removeItem('mmd_patient_verification');
+            localStorage.removeItem('currentTransferId');
+            localStorage.removeItem('currentPatientName');
+            goToStep('codeCard');
+        }
+
+        function openUploadCard() {
+            goToStep('uploadCard');
+            selectors.chooseBtn.disabled = false;
+            selectors.uploadBtn.disabled = false;
+            selectors.endSessionButton.disabled = false;
+            togglePatientSessionUI(true);
+            selectors.status.textContent = '';
+            selectors.status.className = 'status';
+            startPatientTimer();
+        }
+
+        function handleFileSelection(event) {
+            const files = Array.from(event.target.files || []);
+            selectors.selectedFilesContainer.innerHTML = '';
+            if (!files.length) {
+                selectors.fileSelectionStatus.textContent = 'Ingen fil vald';
+                return;
+            }
+            selectors.fileSelectionStatus.textContent = files.length === 1 ? '1 fil vald' : `${files.length} filer valda`;
+            files.forEach(file => {
                 const card = document.createElement('div');
                 card.className = 'selected-file-card';
-                card.innerHTML = `<strong>${f.name}</strong><br>Storlek: ${Math.round(f.size/1024)} KB · Typ: ${f.type || 'okänd'}`;
-                list.appendChild(card);
-            });
-            selectedFilesContainer.appendChild(list);
-
-            // Toggle behavior
-            header.addEventListener('click', () => {
-                const expanded = list.classList.toggle('show');
-                header.classList.toggle('expanded', expanded);
+                card.innerHTML = `<strong>${file.name}</strong><br><span style="color:#64748B;">${(file.size / 1024).toFixed(1)} KB · ${file.type || 'okänd typ'}</span>`;
+                selectors.selectedFilesContainer.appendChild(card);
             });
         }
 
-        // Upload files
-        uploadBtn.addEventListener('click', async () => {
-            const files = Array.from(fileInput.files);
-            
+        async function uploadSelectedFiles() {
+            const files = Array.from(selectors.fileInput.files || []);
             if (!files.length) {
-                status.textContent = "Välj minst en fil.";
-                status.className = "status error";
+                setStatus('Välj minst en fil.', 'error');
                 return;
             }
-
-            uploadBtn.disabled = true;
-            status.textContent = `Laddar upp ${files.length} fil(er)...`;
-            status.className = "status progress";
-
+            if (!state.transferId) {
+                setStatus('Session saknas. Logga in igen.', 'error');
+                return;
+            }
+            selectors.uploadBtn.disabled = true;
+            setStatus(`Laddar upp ${files.length} fil(er)...`, 'progress');
             try {
-                // Verify transfer exists and is open before uploading
-                if (!transferId) {
-                    throw new Error('Ingen överföringssession hittades');
-                }
-                
-                const verifyResponse = await fetch(`/api/complete?transferId=${transferId}`, {
-                    cache: 'no-store'
-                });
-                if (!verifyResponse.ok) {
-                    throw new Error('Överföringssessionen hittades inte');
-                }
-                const verifyData = await verifyResponse.json();
-                if (verifyData.status !== 'open') {
-                    console.log('Transfer status:', verifyData.status, '- reopening if needed');
-                    // The server will automatically reopen closed transfers, but let's verify
-                }
-                
-                // Upload files to API endpoints (most reliable for cross-context communication)
-                const newUploadedFiles = [];
-                
                 for (const file of files) {
-                    console.log('Uploading file:', file.name, 'for transfer:', transferId);
                     const formData = new FormData();
                     formData.append('file', file);
-
-                    const response = await fetch(`/api/upload?transferId=${transferId}`, {
+                    const res = await fetch(`/api/upload?transferId=${state.transferId}`, {
                         method: 'POST',
                         body: formData,
                         cache: 'no-store'
                     });
-
-                    console.log('Upload response status:', response.status);
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('Upload error:', errorText);
-                        throw new Error(errorText || 'Upload failed');
+                    if (!res.ok) {
+                        const text = await res.text();
+                        throw new Error(text || 'Uppladdningen misslyckades');
                     }
-                    console.log('File uploaded successfully:', file.name);
-                    
-                    // Create file metadata for local storage
-                    const fileData = {
+                    state.uploadedFiles.push({
                         name: file.name,
                         size: file.size,
                         type: file.type,
                         uploadedAt: new Date().toISOString(),
-                        transferId: transferId
-                    };
-                    
-                    newUploadedFiles.push(fileData);
+                        transferId: state.transferId
+                    });
                 }
-
-                // Don't mark transfer as complete if we want to allow more uploads
-                // Only mark as complete if this is the final upload (we'll keep it open for multiple uploads)
-                // The transfer will be marked as closed when the doctor views it on the dashboard
-                console.log('Upload completed, keeping transfer open for additional uploads');
-
-                // Add uploaded files to our tracking array
-                uploadedFiles.push(...newUploadedFiles);
-                hasUploaded = true;
-                
-                // Also store in localStorage as backup
-                const storageKey = `mmd_files_${transferId}`;
-                localStorage.setItem(storageKey, JSON.stringify(uploadedFiles));
-                console.log('Files also stored in localStorage as backup:', uploadedFiles);
-                
-                // Move uploaded files to "Uppladdade filer" section
-                // Clear selected files from selectedFilesContainer (they're now uploaded)
-                const selectedFiles = selectedFilesContainer.querySelectorAll('.selected-file-card:not(.additional-upload), .selected-header, .selected-list');
-                selectedFiles.forEach(el => el.remove());
-                
-                // Update the uploaded files display with all uploaded files
+                state.hasUploaded = true;
+                localStorage.setItem(`mmd_files_${state.transferId}`, JSON.stringify(state.uploadedFiles));
+                selectors.fileInput.value = '';
+                selectors.selectedFilesContainer.innerHTML = '';
+                selectors.fileSelectionStatus.textContent = 'Ingen fil vald';
                 updateUploadedFilesDisplay();
-                
-                // Change button text to "Ladda upp fler filer"
-                const chooseBtnText = chooseBtn.querySelector('svg').nextSibling;
-                if (chooseBtnText) {
-                    chooseBtnText.textContent = ' Ladda upp fler filer';
-                } else {
-                    chooseBtn.innerHTML = `
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                            <path d="M12 5v14M5 12h14" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        Ladda upp fler filer
-                    `;
-                }
-
-                // Show success message
-                status.textContent = "Uppladdningen slutförd!";
-                status.className = "status success";
-                
-                // Hide success message after 5 seconds
-                setTimeout(() => {
-                    if (status.textContent === "Uppladdningen slutförd!") {
-                        status.textContent = "";
-                        status.className = "status";
-                    }
-                }, 5000);
-                
-                // Clear file input and selected files display
-                fileInput.value = '';
-                fileSelectionStatus.textContent = 'Ingen fil vald';
-                
+                setStatus('Uppladdningen slutförd!', 'success');
             } catch (error) {
-                status.textContent = `Uppladdningen misslyckades: ${error.message}`;
-                status.className = "status error";
+                console.error(error);
+                setStatus(`Fel: ${error.message}`, 'error');
             } finally {
-                uploadBtn.disabled = false;
+                selectors.uploadBtn.disabled = false;
             }
-        });
-
-        async function uploadFile(file) {
-            console.log('Uploading file:', file.name, 'for transfer:', transferId);
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const response = await fetch(`/api/upload?transferId=${transferId}`, {
-                method: 'POST',
-                body: formData
-            });
-
-            console.log('Upload response status:', response.status);
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Upload error:', errorText);
-                throw new Error(errorText || 'Upload failed');
-            }
-            console.log('File uploaded successfully:', file.name);
         }
 
         function updateUploadedFilesDisplay() {
-            const uploadedFilesSection = document.getElementById('uploadedFilesSection');
-            const uploadedFilesList = document.getElementById('uploadedFilesList');
-            
-            if (uploadedFiles.length === 0) {
-                uploadedFilesSection.style.display = 'none';
+            if (!state.uploadedFiles.length) {
+                selectors.uploadedFilesSection.style.display = 'none';
                 return;
             }
-            
-            uploadedFilesSection.style.display = 'block';
-            uploadedFilesList.innerHTML = '';
-            
-            if (uploadedFiles.length === 1) {
-                const f = uploadedFiles[0];
+            selectors.uploadedFilesSection.style.display = 'block';
+            selectors.uploadedFilesList.innerHTML = '';
+            state.uploadedFiles.forEach(file => {
                 const card = document.createElement('div');
                 card.className = 'selected-file-card';
-                card.innerHTML = `<strong>${f.name}</strong><br>Storlek: ${Math.round(f.size/1024)} KB · Typ: ${f.type || 'okänd'}`;
-                uploadedFilesList.appendChild(card);
-            } else {
-                // Header
-                const header = document.createElement('div');
-                header.className = 'selected-header';
-                header.innerHTML = `<span>Uppladdade filer (${uploadedFiles.length})</span><span class="chevron">›</span>`;
-                uploadedFilesList.appendChild(header);
-
-                // List
-                const list = document.createElement('div');
-                list.className = 'selected-list show'; // Show by default for uploaded files
-                uploadedFiles.forEach(f => {
-                    const card = document.createElement('div');
-                    card.className = 'selected-file-card';
-                    card.innerHTML = `<strong>${f.name}</strong><br>Storlek: ${Math.round(f.size/1024)} KB · Typ: ${f.type || 'okänd'}`;
-                    list.appendChild(card);
-                });
-                uploadedFilesList.appendChild(list);
-
-                // Toggle behavior
-                header.addEventListener('click', () => {
-                    const expanded = list.classList.toggle('show');
-                    header.classList.toggle('expanded', expanded);
-                });
-            }
+                card.innerHTML = `<strong>${file.name}</strong><br><span style="color:#64748B;">${(file.size / 1024).toFixed(1)} KB · ${file.type || 'okänd typ'}</span>`;
+                selectors.uploadedFilesList.appendChild(card);
+            });
         }
 
-        // Check for existing uploaded files when patient is selected
-        async function checkExistingUploads() {
-            if (!transferId) return;
-            
-            try {
-                const response = await fetch(`/api/complete?transferId=${transferId}`, {
-                    cache: 'no-store',
-                    headers: {
-                        'Cache-Control': 'no-cache, no-store, must-revalidate'
-                    }
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    // CRITICAL: Only show files if transfer is from current session
-                    // If transfer has files but we just created it, those are old files - ignore them
-                    if (data.files && data.files.length > 0 && hasUploaded) {
-                        // Only show files if we've already uploaded in this session
-                        // Convert server file format to our format
-                        uploadedFiles = data.files.map(f => ({
-                            name: f.name,
-                            size: f.size,
-                            type: f.mimetype,
-                            uploadedAt: f.uploadedAt,
-                            transferId: transferId
-                        }));
-                        updateUploadedFilesDisplay();
-                        
-                        // Change button text
-                        chooseBtn.innerHTML = `
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                <path d="M12 5v14M5 12h14" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Ladda upp fler filer
-                        `;
-                    } else {
-                        // Transfer is empty or we haven't uploaded yet - clear mobile state
-                        uploadedFiles = [];
-                        hasUploaded = false;
-                        updateUploadedFilesDisplay();
-                        // Reset button text
-                        chooseBtn.innerHTML = `
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                <path d="M12 5v14M5 12h14" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Välj filer
-                        `;
-                    }
-                }
-            } catch (error) {
-                console.error('Error checking existing uploads:', error);
-                // On error, clear state
-                uploadedFiles = [];
-                hasUploaded = false;
-                updateUploadedFilesDisplay();
+        function setStatus(message, type) {
+            if (!message) {
+                selectors.status.textContent = '';
+                selectors.status.className = 'status';
+                return;
             }
+            selectors.status.textContent = message;
+            selectors.status.className = `status ${type} show`;
         }
+
+        window.addEventListener('beforeunload', () => {
+            stopDoctorWatch();
+            stopSessionWatch();
+        });
     </script>
 </body>
 </html>

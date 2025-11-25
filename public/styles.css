@@ -1,3 +1,327 @@
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.user-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.2;
+}
+
+.user-title {
+    margin: 2px 0 0;
+    font-size: 14px;
+    color: #6c768c;
+}
+
+.mini-insights {
+    background: #fff;
+    border-radius: 24px;
+    padding: 24px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+}
+
+.mini-insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+}
+
+.mini-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 18px;
+    border: none;
+    box-shadow: none;
+}
+
+.mini-card h3 {
+    margin: 0 0 6px 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.mini-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+}
+
+.metrics-tabs {
+    margin-top: 16px;
+    background: #fff;
+    border-radius: 24px;
+    padding: 24px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    box-shadow: none;
+}
+
+.metrics-tabs-header {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.metrics-tab {
+    border-radius: 999px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    background: transparent;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+}
+.metrics-tab:not(.active):hover {
+    border-color: #0f172a;
+    color: #0f172a;
+}
+
+.metrics-tab.active {
+    background: #0f172a;
+    color: #fff;
+    border-color: #0f172a;
+    box-shadow: none;
+}
+
+.metrics-tab-panels {
+    margin-top: 16px;
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+.graph-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+.knowledge-grid-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 20px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    box-shadow: none;
+    flex: 1;
+}
+
+.knowledge-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.knowledge-grid .organ-item-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+.knowledge-grid .organ-item {
+    margin-bottom: 0;
+}
+
+.graph-card,
+.lab-value-card {
+    background: #f8fafc;
+    border-radius: 20px;
+    padding: 20px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    box-shadow: none;
+}
+
+.graph-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.graph-card-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #0E1118;
+}
+
+.graph-value {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.graph-value.graph-value-multi {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.graph-value-badge {
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 12px;
+    color: #0E1118;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.graph-placeholder {
+    position: relative;
+    height: 160px;
+    background: #fff;
+    border-radius: 16px;
+    border: 1px dashed rgba(15, 23, 42, 0.15);
+    overflow: hidden;
+}
+
+.graph-placeholder .axis {
+    position: absolute;
+    background: rgba(15, 23, 42, 0.08);
+}
+
+.graph-placeholder .axis.y {
+    width: 1px;
+    height: 100%;
+    left: 24px;
+    top: 0;
+}
+
+.graph-placeholder .axis.x {
+    height: 1px;
+    width: 100%;
+    left: 0;
+    bottom: 24px;
+}
+
+.graph-placeholder::after {
+    content: '';
+    position: absolute;
+    inset: 32px;
+    border: 1px dotted rgba(15, 23, 42, 0.06);
+    border-radius: 12px;
+}
+
+.graph-placeholder canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+.graph-placeholder.chart-active .axis,
+.graph-placeholder.chart-active::after {
+    opacity: 0;
+}
+
+.graph-placeholder.chart-active canvas {
+    display: block;
+}
+
+.metrics-tabs .card-title.metrics-title {
+    color: #0E1118;
+    margin-bottom: 16px;
+}
+
+.lab-value-card h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    color: #0E1118;
+}
+
+.lab-value-card p {
+    margin: 0;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.value-placeholder-card {
+    background: #f8fafc;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    border-radius: 20px;
+    padding: 32px;
+    text-align: center;
+}
+
+.value-placeholder-card p {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #94a3b8;
+}
+
+.simple-info-card,
+.symptom-section,
+.health-card,
+.upload-card,
+.journal-card,
+.metrics-tabs {
+    box-shadow: none;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    background: #fff;
+    border-radius: 24px;
+}
+
+.right-column > .simple-info-card,
+.symptom-section {
+    border-radius: 20px;
+}
+
+.health-card,
+.upload-card,
+.journal-card,
+.file-category-expandable,
+.delete-modal,
+.logout-modal {
+    box-shadow: none !important;
+    background: #fff;
+}
+
+.simple-info-card p,
+.simple-info-card h2 {
+    margin: 0;
+}
+
+.simple-info-card {
+    padding: 18px;
+}
+
+.empty-value {
+    margin: 6px 0 0;
+    font-size: 15px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.symptom-section {
+    margin-top: 32px;
+}
+
+@media (max-width: 900px) {
+    .metrics-tabs {
+        padding: 16px;
+    }
+    .graph-card-grid {
+        grid-template-columns: 1fr;
+    }
+    .knowledge-grid {
+        grid-template-columns: 1fr;
+    }
+}
 /* Reset and base styles */
 * {
     margin: 0;
@@ -18,10 +342,43 @@ body {
     min-height: 100vh;
 }
 
+.session-timer-toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 18px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #0E1118 0%, #000 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 1100;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.session-timer-toast.dashboard-context {
+    left: calc(280px + (100vw - 280px) / 2);
+}
+
+.timer-label {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.7);
+}
+
+.timer-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+}
+
 /* Sidebar */
 .sidebar {
     width: 280px;
-    background: linear-gradient(180deg, #161B27 0%, #1D212B 100%);
+    background: linear-gradient(180deg, #0E1118 0%, #000000 100%);
     color: white;
     display: flex;
     flex-direction: column;
@@ -85,11 +442,11 @@ body {
 }
 
 .nav-item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(255, 255, 255, 0.08);
 }
 
 .nav-item.active {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.18);
     border-left-color: white;
 }
 
@@ -113,7 +470,15 @@ body {
     flex: 1;
     margin-left: 280px;
     padding: 32px;
-    background-color: #F0F2F5;
+    background-color: #E5E7EB;
+}
+
+.main-content > section {
+    margin-top: 24px;
+}
+
+.main-content > section:first-of-type {
+    margin-top: 0;
 }
 
 .main-content:has(.chat-container) {
@@ -125,13 +490,13 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 32px;
+    margin-bottom: 24px;
 }
 
 .patient-info h1 {
     font-size: 22px;
     font-weight: 600;
-    color: #333;
+    color: #0E1118;
     margin-bottom: 8px;
 }
 
@@ -173,16 +538,33 @@ body {
 }
 
 /* Overview grid */
+.knowledge-journal-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    width: 100%;
+    margin-top: 18px;
+    align-items: flex-start;
+}
+
+.journal-provsvar-column {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    flex: 1;
+}
+
 .overview-grid {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 18px;
     width: 100%;
+    margin-top: 24px;
 }
 
 .main-layout {
     display: flex;
-    gap: 24px;
+    gap: 18px;
     width: 100%;
     align-items: flex-start; /* Align columns to top, don't stretch */
 }
@@ -190,21 +572,22 @@ body {
 .right-column {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 18px;
     flex: 1; /* Take up 50% width */
     min-height: 0; /* Allow column to maintain its own height */
 }
 
 .cards-row {
     display: flex;
-    gap: 24px;
+    gap: 18px;
     width: 100%;
     align-items: stretch; /* Make cards equal height */
 }
 
 .health-card {
-    background: white;
-    border-radius: 8px;
+    background: #fff;
+    border-radius: 24px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
     padding: 24px;
     display: flex;
     flex-direction: column;
@@ -212,19 +595,61 @@ body {
 }
 
 .journal-card {
-    background: white;
-    border-radius: 8px;
+    background: #fff;
+    border-radius: 24px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
     padding: 24px;
-    flex: 1; /* Take up 50% width */
     display: flex;
     flex-direction: column;
     height: fit-content; /* Hug content height, don't stretch */
+    width: 100%;
+}
+
+.session-info-card,
+.file-count-card {
+    background: #fff;
+    border-radius: 24px;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.session-info-content,
+.file-count-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.session-info-item,
+.file-count-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.session-info-label,
+.file-count-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    margin: 0;
+}
+
+.session-info-value,
+.file-count-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: #0E1118;
+    margin: 0;
 }
 
 .card-title {
     font-size: 20px;
     font-weight: 600;
-    color: #333;
+    color: #0E1118;
     margin-bottom: 16px;
 }
 
@@ -360,11 +785,21 @@ body {
     background-color: #dc2626;
 }
 
+.status-indicator.neutral {
+    background-color: #94a3b8;
+}
+
 .journal-content {
     flex: 1;
     padding: 0 0 20px 0;
     display: flex;
     flex-direction: column;
+}
+
+.journal-empty {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 15px;
 }
 
 /* Empty journal state */
@@ -1081,7 +1516,7 @@ body {
     background: white;
     border-radius: 12px;
     padding: 32px;
-    max-width: 420px;
+    max-width: 520px;
     width: 90%;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
     transform: scale(0.9) translateY(20px);
@@ -1157,6 +1592,12 @@ body {
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.select-all-btn:hover {
+    border-color: #94a3b8;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
 }
 
 .delete-files-list {
@@ -1169,17 +1610,17 @@ body {
 
 .delete-file-item {
     display: flex;
-    align-items: flex-start;
-    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     padding: 10px 12px;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     background: #fff;
-    cursor: pointer;
 }
 
 .delete-file-checkbox {
-    margin-top: 4px;
+    margin: 0;
 }
 
 .delete-file-item .file-name {
@@ -1468,6 +1909,100 @@ body {
     color: #666;
     margin: 0;
     margin-left: 56px;
+}
+
+.organ-actions {
+    display: flex;
+    justify-content: flex-start;
+    margin: 12px 0 24px 0;
+}
+
+.organ-actions .action-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.organ-actions .back-button,
+.organ-actions .summarize-button {
+    margin: 0;
+}
+
+/* Import overlay */
+.import-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 12, 20, 0.78);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 4000;
+    padding: 32px 16px;
+}
+.import-overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+}
+.import-overlay-card {
+    width: min(520px, calc(100vw - 32px));
+    background: linear-gradient(180deg, #0E1118 0%, #000000 100%);
+    border-radius: 24px;
+    padding: 32px;
+    text-align: center;
+    color: #F8FAFC;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 25px 80px rgba(3, 7, 18, 0.55);
+}
+.import-overlay-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #60A5FA;
+    font-size: 20px;
+    margin-bottom: 16px;
+}
+.import-overlay-title {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+.import-overlay-copy {
+    margin: 0;
+    font-size: 15px;
+    color: rgba(248, 250, 252, 0.8);
+}
+.import-progress-track {
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+    margin: 24px 0 12px;
+}
+.import-progress-bar {
+    height: 100%;
+    width: 8%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #34D399 0%, #10B981 100%);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+    transition: width 0.35s ease;
+}
+.import-progress-text {
+    margin: 0;
+    font-size: 14px;
+    color: rgba(248, 250, 252, 0.85);
+}
+body.import-locked {
+    overflow: hidden;
 }
 
 .charts-grid {
@@ -2156,6 +2691,7 @@ body {
 .category-title-row {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 12px;
     flex: 1;
 }
@@ -2305,6 +2841,10 @@ body {
 
 /* Responsive adjustments for file categories */
 @media (max-width: 768px) {
+    .knowledge-journal-layout {
+        grid-template-columns: 1fr; /* Stack vertically on mobile */
+    }
+    
     .main-layout {
         flex-direction: column; /* Stack columns vertically on mobile */
     }

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MMDCare Platform - Care Provider Dashboard</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="dashboard">
@@ -58,58 +59,226 @@
                     <p class="patient-date">2024-09-09</p>
                 </div>
                 <div class="user-info">
+                    <div class="user-meta">
                     <span class="user-name" data-doctor-name-source data-doctor-name="full">Dr. Anna Andersson</span>
+                        <p class="user-title">Kardiologist</p>
+                    </div>
                     <div class="user-avatar">AA</div>
                 </div>
             </div>
 
-            <div class="overview-grid">
-                <!-- Main Layout: Journal (50%) | Health Data + Upload (50%) -->
-                <div class="main-layout">
-                    <!-- Journal Card - 50% Width -->
-                    <div class="journal-card card-animate">
-                        <h2 class="card-title">Journalanteckningar</h2>
-                        <div class="journal-content">
-                            <!-- PDF entries will be dynamically added here -->
+            <section class="mini-insights card-animate">
+                <h2 class="card-title">Snabbstatus</h2>
+                <div class="mini-insights-grid">
+                    <article class="mini-card" data-metric-card="bloodPressure">
+                        <h3>Blodtryck</h3>
+                        <span class="mini-value">–</span>
+                    </article>
+                    <article class="mini-card" data-metric-card="heartRate">
+                        <h3>Hjärtfrekvens</h3>
+                        <span class="mini-value">–</span>
+                    </article>
+                    <article class="mini-card" data-metric-card="oxygen">
+                        <h3>Syresättning</h3>
+                        <span class="mini-value">–</span>
+                    </article>
+                    <article class="mini-card" data-metric-card="weight">
+                        <h3>Vikt &amp; vätska</h3>
+                        <span class="mini-value">–</span>
+                    </article>
+                    <article class="mini-card" data-metric-card="steps">
+                        <h3>Steg</h3>
+                        <span class="mini-value">–</span>
+                    </article>
                         </div>
-                    </div>
+            </section>
 
-                    <!-- Right Column - 50% Width with stacked cards -->
-                    <div class="right-column">
-                    <div class="health-card card-animate">
-                        <h2 class="card-title">Provsvar</h2>
-                        <div class="organ-list">
-                            <a href="heart.html" class="organ-item-link">
-                                <div class="organ-item provsvar-card">
-                                    <div class="provsvar-main">
-                                        <h3 class="organ-name">Provsvar</h3>
-                                        <div class="provsvar-status">
-                                            <span id="provsvarStatusIndicator" class="status-indicator bad"></span>
-                                            <span id="provsvarDataState" class="data-count">Ingen data tillgänglig</span>
-                                        </div>
-                                    </div>
-                                    <div class="chevron">›</div>
+            <section class="metrics-tabs card-animate">
+                <h2 class="card-title metrics-title">Mätvärden</h2>
+                <div class="metrics-tabs-header">
+                    <button class="metrics-tab active" data-tab="hemodynamik">Hemodynamik</button>
+                    <button class="metrics-tab" data-tab="hf-vatska">HF &amp; vätska</button>
+                    <button class="metrics-tab" data-tab="risk-lab">Risk &amp; lab</button>
+                    </div>
+                <div class="metrics-tab-panels">
+                    <div class="tab-panel active" data-tab-panel="hemodynamik">
+                        <div class="graph-card-grid">
+                            <div class="graph-card" data-chart-key="bloodPressure">
+                                <div class="graph-card-header">
+                                    <h3>Blodtryck över tid</h3>
+                                    <span class="graph-value" data-graph-value="bloodPressure">Värde saknas</span>
                                 </div>
-                            </a>
+                                <div class="graph-placeholder">
+                                    <span class="axis y"></span>
+                                    <span class="axis x"></span>
+                                    <canvas id="chart-bloodPressure"></canvas>
+                                </div>
+                            </div>
+                            <div class="graph-card" data-chart-key="heartRate">
+                                <div class="graph-card-header">
+                                    <h3>Hjärtfrekvens &amp; AF-börda</h3>
+                                    <span class="graph-value" data-graph-value="heartRate">Värde saknas</span>
+                                </div>
+                                <div class="graph-placeholder">
+                                    <span class="axis y"></span>
+                                    <span class="axis x"></span>
+                                    <canvas id="chart-heartRate"></canvas>
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                        <!-- File Upload Section -->
-                        <div class="upload-card card-animate">
-                            <div class="upload-card-header">
-                                <h2 class="card-title">Mottagna filer</h2>
-                                <button type="button" class="clear-files-btn" onclick="openUploadsDeleteOverlay()" title="Radera filer">
-                                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                                        <path d="M3 6h18" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
-                                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
-                                        <path d="M10 11v6M14 11v6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
-                                        <path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
-                                    </svg>
-                                    <span class="sr-only">Radera filer</span>
-                                </button>
+                    <div class="tab-panel" data-tab-panel="hf-vatska">
+                        <div class="graph-card-grid">
+                            <div class="graph-card" data-chart-key="weight">
+                                <div class="graph-card-header">
+                                    <h3>Vikt &amp; diuretika</h3>
+                                    <span class="graph-value" data-graph-value="weight">Värde saknas</span>
+                                </div>
+                                <div class="graph-placeholder">
+                                    <span class="axis y"></span>
+                                    <span class="axis x"></span>
+                                    <canvas id="chart-weight"></canvas>
+                                </div>
                             </div>
-                            <div class="file-categories" id="file-categories">
-                                <!-- File categories will be populated here -->
+                            <div class="graph-card" data-chart-key="ntprobnp">
+                                <div class="graph-card-header">
+                                    <h3>NT-proBNP</h3>
+                                    <span class="graph-value" data-graph-value="ntprobnp">Värde saknas</span>
+                                </div>
+                                <div class="graph-placeholder">
+                                    <span class="axis y"></span>
+                                    <span class="axis x"></span>
+                                    <canvas id="chart-ntprobnp"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-panel" data-tab-panel="risk-lab">
+                        <div class="graph-card-grid">
+                            <div class="graph-card" data-chart-key="ldl">
+                                <div class="graph-card-header">
+                                    <h3>LDL över tid</h3>
+                                    <span class="graph-value" data-graph-value="ldl">Värde saknas</span>
+                                </div>
+                                <div class="graph-placeholder">
+                                    <span class="axis y"></span>
+                                    <span class="axis x"></span>
+                                    <canvas id="chart-ldl"></canvas>
+                                </div>
+                            </div>
+                            <div class="graph-card" data-chart-key="glucose">
+                                <div class="graph-card-header">
+                                    <h3>HbA1c över tid</h3>
+                                    <span class="graph-value" data-graph-value="glucose">Värde saknas</span>
+                                </div>
+                                <div class="graph-placeholder">
+                                    <span class="axis y"></span>
+                                    <span class="axis x"></span>
+                                    <canvas id="chart-glucose"></canvas>
+                                </div>
+                            </div>
+                            <div class="graph-card" data-chart-key="egfr">
+                                <div class="graph-card-header">
+                                    <h3>eGFR över tid</h3>
+                                    <span class="graph-value" data-graph-value="egfr">Värde saknas</span>
+                                </div>
+                                <div class="graph-placeholder">
+                                    <span class="axis y"></span>
+                                    <span class="axis x"></span>
+                                    <canvas id="chart-egfr"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="knowledge-journal-layout">
+                <section class="knowledge-grid-card card-animate">
+                    <h2 class="card-title">Patientdata</h2>
+                    <div class="knowledge-grid">
+                        <a href="heart.html" class="organ-item-link">
+                            <div class="organ-item provsvar-card">
+                                <div class="provsvar-main">
+                                    <h3 class="organ-name">Data</h3>
+                                    <div class="provsvar-status">
+                                        <span id="provsvarStatusIndicator" class="status-indicator neutral"></span>
+                                        <span id="provsvarDataState" class="data-count">Ingen data tillgänglig</span>
+                                    </div>
+                                </div>
+                                <div class="chevron">›</div>
+                            </div>
+                        </a>
+                        <a href="#" class="organ-item-link">
+                            <div class="organ-item provsvar-card">
+                                <div class="provsvar-main">
+                                    <h3 class="organ-name">Journalanteckningar</h3>
+                                    <div class="provsvar-status">
+                                        <span class="status-indicator neutral"></span>
+                                        <span class="data-count">Ingen data tillgänglig</span>
+                                    </div>
+                                </div>
+                                <div class="chevron">›</div>
+                            </div>
+                        </a>
+                        <a href="#" class="organ-item-link">
+                            <div class="organ-item provsvar-card">
+                                <div class="provsvar-main">
+                                    <h3 class="organ-name">Diagnoser</h3>
+                                    <div class="provsvar-status">
+                                        <span class="status-indicator neutral"></span>
+                                        <span class="data-count">Ingen data tillgänglig</span>
+                                    </div>
+                                </div>
+                                <div class="chevron">›</div>
+                            </div>
+                        </a>
+                        <a href="#" class="organ-item-link">
+                            <div class="organ-item provsvar-card">
+                                <div class="provsvar-main">
+                                    <h3 class="organ-name">Läkemedel</h3>
+                                    <div class="provsvar-status">
+                                        <span class="status-indicator neutral"></span>
+                                        <span class="data-count">Ingen data tillgänglig</span>
+                                    </div>
+                                </div>
+                                <div class="chevron">›</div>
+                            </div>
+                        </a>
+                        <a href="#" class="organ-item-link">
+                            <div class="organ-item provsvar-card">
+                                <div class="provsvar-main">
+                                    <h3 class="organ-name">Larm</h3>
+                                    <div class="provsvar-status">
+                                        <span class="status-indicator neutral"></span>
+                                        <span class="data-count">Ingen data tillgänglig</span>
+                                    </div>
+                                </div>
+                                <div class="chevron">›</div>
+                            </div>
+                        </a>
+                        <a href="#" class="organ-item-link">
+                            <div class="organ-item provsvar-card">
+                                <div class="provsvar-main">
+                                    <h3 class="organ-name">Symtom</h3>
+                                    <div class="provsvar-status">
+                                        <span class="status-indicator neutral"></span>
+                                        <span class="data-count">Ingen data tillgänglig</span>
+                                    </div>
+                                </div>
+                                <div class="chevron">›</div>
+                            </div>
+                        </a>
+                        </div>
+                </section>
+
+                <div class="journal-provsvar-column">
+                    <div class="file-count-card card-animate">
+                        <h2 class="card-title">Uppladdade filer</h2>
+                        <div class="file-count-content">
+                            <div class="file-count-item">
+                                <h3 class="file-count-label">Antal filer</h3>
+                                <span id="fileCountValue" class="file-count-value">0</span>
                             </div>
                         </div>
                     </div>
@@ -123,24 +292,81 @@
         <div class="logout-modal">
             <div class="logout-modal-content">
                 <div class="logout-info-card">
-                    <h3 style="margin: 0 0 8px 0; color: #1D212B; font-size: 20px;">Logga ut</h3>
-                    <p style="margin: 0; color: #666; font-size: 16px;">Är du säker på att du vill logga ut från MMDConnect?</p>
+                    <h3 style="margin: 0 0 8px 0; color: #1D212B; font-size: 20px;">Avsluta session</h3>
+                    <p style="margin: 0; color: #666; font-size: 16px;">Är du säker på att du vill avsluta sessionen?</p>
                 </div>
             </div>
             <div class="logout-modal-actions">
                 <button onclick="hideLogoutOverlay()" class="logout-btn-cancel">Avbryt</button>
-                <button onclick="confirmLogout()" class="logout-btn-confirm">Logga ut</button>
+                <button onclick="confirmLogout()" class="logout-btn-confirm">Avsluta session</button>
             </div>
         </div>
     </div>
+    <div id="importOverlay" class="import-overlay" aria-hidden="true">
+        <div class="import-overlay-card">
+            <div class="import-overlay-icon" id="importOverlayIcon">⬆︎</div>
+            <h3 id="importOverlayTitle" class="import-overlay-title">Importerar patientdata</h3>
+            <p id="importOverlayCopy" class="import-overlay-copy">Detta tar vanligtvis mindre än 30 sekunder.</p>
+            <div id="importProgressTrack" class="import-progress-track">
+                <div id="importProgressBar" class="import-progress-bar"></div>
+            </div>
+            <p id="importProgressText" class="import-progress-text">Förbereder import...</p>
+        </div>
+    </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20250105"></script>
     <script>
         let uploadedFiles = [];
         let currentTransferId = null;
         let eventSource = null;
         let lastServerFileCount = 0;
         let currentSessionId = null;
+        let filePollIntervalId = null;
+        const notifiedFiles = new Set(); // Track files that have been notified
+        
+        // Clear notification tracking on page load (only track within current session)
+        window.addEventListener('beforeunload', () => {
+            notifiedFiles.clear();
+        });
+        const importOverlayState = {
+            timerId: null,
+            visible: false,
+            totalSteps: 0,
+            mode: null
+        };
+        const dashboardCharts = {};
+        const metricCardElements = {};
+        const graphValueElements = {};
+        const excelAnalyticsState = {
+            combinedMetrics: null,
+            files: []
+        };
+        const chartCanvasIdMap = {
+            bloodPressure: 'chart-bloodPressure',
+            heartRate: 'chart-heartRate',
+            weight: 'chart-weight',
+            oxygen: 'chart-ntprobnp',
+            ldl: 'chart-ldl',
+            glucose: 'chart-glucose',
+            egfr: 'chart-egfr'
+        };
+        const DASHBOARD_WAITING_OVERLAY_KEY = 'mmd_dashboard_waiting_overlay_seen';
+
+        function hasSeenWaitingOverlay() {
+            try {
+                return localStorage.getItem(DASHBOARD_WAITING_OVERLAY_KEY) === 'true';
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function markWaitingOverlaySeen() {
+            try {
+                localStorage.setItem(DASHBOARD_WAITING_OVERLAY_KEY, 'true');
+            } catch (error) {
+                // Ignore storage errors (e.g. Safari private mode)
+            }
+        }
 
         function logout() {
             showLogoutOverlay();
@@ -148,6 +374,9 @@
 
         // Trigger dashboard page animations
         document.addEventListener('DOMContentLoaded', async function() {
+            // Clear notification tracking on page load
+            notifiedFiles.clear();
+            
             // CRITICAL: Store session start time ONLY if this is a new session (not a redirect from upload)
             // If we're being redirected from index.html after upload, sessionStartTime should already exist
             // If it doesn't exist, this is a new session after logout - set it now
@@ -180,6 +409,18 @@
             
             // Initialize file upload functionality (will load ONLY new files)
             initializeFileUpload();
+            initializeMetricsTabs();
+            registerMetricCardElements();
+            registerGraphValueElements();
+            showImportOverlay(0, { mode: 'waiting' });
+            
+            // Initialize Journalanteckningar card click handler
+            initializeJournalCard();
+            
+            // Initialize session info
+            updateSessionTimeRemaining();
+            updateFileCount();
+            ensureSessionTimerInterval();
             
             // Add escape key listener for logout overlay
             document.addEventListener('keydown', function(event) {
@@ -229,21 +470,12 @@
                         console.log('Transfer verification response:', verifyData);
                         console.log('Files in transfer:', verifyData.files?.length || 0);
                         
-                        // CRITICAL: Only load files if they exist on server
-                        // These are the NEW files - old files already cleared above
-                        if (verifyData.files && verifyData.files.length > 0) {
-                            currentTransferId = savedTransferId;
-                            console.log('✅ Loading NEW files from server:', currentTransferId, 'File count:', verifyData.files.length);
-                            await loadUploadedFiles();
-                            startFileEventStream();
-                        } else {
-                            // No files on server - show empty
-                            console.log('Transfer has no files - showing empty');
-                            localStorage.removeItem('currentTransferId');
-                            currentTransferId = null;
-                            uploadedFiles = [];
-                            updateFileDisplay();
-                        }
+                        // Always keep the transfer so we can poll for future uploads
+                        currentTransferId = savedTransferId;
+                        console.log('✅ Transfer verified, monitoring uploads for ID:', currentTransferId);
+                        
+                        await loadUploadedFiles();
+                        startFileEventStream();
                     } else {
                         // Transfer doesn't exist - show empty
                         console.log('Transfer not found on server - showing empty');
@@ -268,11 +500,786 @@
             }
         }
 
+        function registerMetricCardElements() {
+            document.querySelectorAll('[data-metric-card]').forEach(card => {
+                const key = card.getAttribute('data-metric-card');
+                const valueEl = card.querySelector('.mini-value');
+                if (key && valueEl) {
+                    metricCardElements[key] = valueEl;
+                }
+            });
+        }
+
+        function registerGraphValueElements() {
+            document.querySelectorAll('[data-graph-value]').forEach(element => {
+                const key = element.getAttribute('data-graph-value');
+                if (key) {
+                    graphValueElements[key] = element;
+                }
+            });
+        }
+
+        function resetExcelDrivenUI() {
+            resetMiniCards();
+            resetGraphValues();
+            resetCharts();
+            if (currentTransferId) {
+                showImportOverlay(0, { mode: 'waiting' });
+            } else {
+                finishImportOverlay({ immediate: true });
+            }
+        }
+
+        function resetMiniCards() {
+            Object.values(metricCardElements).forEach(el => {
+                el.textContent = 'Värde saknas';
+            });
+        }
+
+        function resetGraphValues() {
+            Object.values(graphValueElements).forEach(el => {
+                el.textContent = 'Värde saknas';
+            });
+        }
+
+        function resetCharts() {
+            Object.entries(chartCanvasIdMap).forEach(([key, canvasId]) => {
+                renderChartOrEmpty(key, canvasId, null, 'Ingen data tillgänglig');
+            });
+        }
+
+        function applyExcelMetricsToUI(metrics) {
+            if (!metrics) {
+                resetExcelDrivenUI();
+                return;
+            }
+            updateMiniCardsFromMetrics(metrics.latest);
+            updateGraphCardsFromMetrics(metrics);
+        }
+
+        function updateMiniCardsFromMetrics(latest) {
+            if (!latest) {
+                resetMiniCards();
+                return;
+            }
+
+            if (latest.bloodPressure) {
+                const systolic = latest.bloodPressure.systolic ?? '–';
+                const diastolic = latest.bloodPressure.diastolic ?? '–';
+                setMiniCardValue('bloodPressure', `${systolic}/${diastolic} ${latest.bloodPressure.unit || 'mmHg'}`);
+            } else {
+                setMiniCardValue('bloodPressure', 'Värde saknas');
+            }
+
+            if (latest.heartRate) {
+                setMiniCardValue('heartRate', `${formatNumericValue(latest.heartRate.value, 0) || latest.heartRate.value} bpm`);
+            } else {
+                setMiniCardValue('heartRate', 'Värde saknas');
+            }
+
+            if (latest.oxygenSaturation) {
+                setMiniCardValue('oxygen', `${formatNumericValue(latest.oxygenSaturation.value, 0) || latest.oxygenSaturation.value}%`);
+            } else {
+                setMiniCardValue('oxygen', 'Värde saknas');
+            }
+
+            if (latest.weight) {
+                const unit = latest.weight.unit || 'kg';
+                setMiniCardValue('weight', `${formatNumericValue(latest.weight.value) || latest.weight.value} ${unit}`);
+            } else {
+                setMiniCardValue('weight', 'Värde saknas');
+            }
+
+            if (latest.steps) {
+                setMiniCardValue('steps', `${formatNumericValue(latest.steps.value, 0) || latest.steps.value} steg`);
+            } else {
+                setMiniCardValue('steps', 'Värde saknas');
+            }
+        }
+
+        function setMiniCardValue(key, text) {
+            if (metricCardElements[key]) {
+                metricCardElements[key].textContent = text || 'Värde saknas';
+            }
+        }
+
+        function updateGraphCardsFromMetrics(metrics) {
+            const trends = metrics.trends || {};
+            const latest = metrics.latest || {};
+
+            updateBloodPressureChart(trends.bloodPressure || [], latest.bloodPressure);
+            updateHeartRateChart(trends.heartRate || [], trends.afBurden || [], latest.heartRate, latest.afBurden);
+            updateWeightChart(trends.weight || [], latest.weight);
+            updateOxygenChart(trends.oxygenSaturation || [], latest.oxygenSaturation);
+            updateRiskLabChart(metrics);
+            updateGlucoseChart(trends.glucose || [], latest.glucose);
+            updateEgfrChart(trends.egfr || [], latest.egfr);
+        }
+
+        function updateBloodPressureChart(entries, latest) {
+            const canvasId = chartCanvasIdMap.bloodPressure;
+            if (!canvasId) return;
+
+            if (!Array.isArray(entries) || !entries.length) {
+                renderChartOrEmpty('bloodPressure', canvasId, null, 'Ingen data tillgänglig');
+                setGraphValueText('bloodPressure', 'Värde saknas');
+                return;
+            }
+
+            const timeline = buildTimelineLabels([entries]);
+            const systolicData = mapEntriesToSeries(timeline.keys, entries, entry => entry.systolic ?? null);
+            const diastolicData = mapEntriesToSeries(timeline.keys, entries, entry => entry.diastolic ?? null);
+
+            renderChartOrEmpty('bloodPressure', canvasId, {
+                labels: timeline.labels,
+                datasets: [
+                    {
+                        label: 'Systoliskt',
+                        data: systolicData,
+                        borderColor: '#f97316',
+                        backgroundColor: 'rgba(249,115,22,0.15)',
+                        tension: 0.35,
+                        fill: false,
+                        spanGaps: true
+                    },
+                    {
+                        label: 'Diastoliskt',
+                        data: diastolicData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16,185,129,0.15)',
+                        tension: 0.35,
+                        fill: false,
+                        spanGaps: true
+                    }
+                ]
+            });
+
+            if (latest) {
+                const systolic = latest.systolic ?? '–';
+                const diastolic = latest.diastolic ?? '–';
+                setGraphValueText('bloodPressure', `${systolic}/${diastolic} ${latest.unit || 'mmHg'}`);
+            } else {
+                setGraphValueText('bloodPressure', 'Värde saknas');
+            }
+        }
+
+        function updateHeartRateChart(hrEntries, afEntries, latestHeartRate, latestAf) {
+            const canvasId = chartCanvasIdMap.heartRate;
+            if (!canvasId) return;
+
+            if ((!Array.isArray(hrEntries) || !hrEntries.length) && (!Array.isArray(afEntries) || !afEntries.length)) {
+                renderChartOrEmpty('heartRate', canvasId, null, 'Ingen data tillgänglig');
+                setGraphValueText('heartRate', 'Värde saknas');
+                return;
+            }
+
+            const hrSeries = maybeAggregateTrendSeries(hrEntries);
+            const afSeries = maybeAggregateTrendSeries(afEntries);
+            const timeline = buildTimelineLabels([hrSeries, afSeries]);
+            const datasets = [];
+
+            if (hrSeries.length) {
+                datasets.push({
+                    label: 'Hjärtfrekvens',
+                    data: mapEntriesToSeries(timeline.keys, hrSeries, entry => entry.value ?? null),
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37,99,235,0.15)',
+                    tension: 0.35,
+                    fill: true,
+                    spanGaps: true,
+                    yAxisID: 'y'
+                });
+            }
+
+            if (afSeries.length) {
+                datasets.push({
+                    label: 'AF-börda',
+                    data: mapEntriesToSeries(timeline.keys, afSeries, entry => entry.value ?? null),
+                    borderColor: '#f87171',
+                    backgroundColor: 'rgba(248,113,113,0.1)',
+                    tension: 0.35,
+                    fill: false,
+                    spanGaps: true,
+                    yAxisID: 'y1'
+                });
+            }
+
+            renderChartOrEmpty('heartRate', canvasId, {
+                labels: timeline.labels,
+                datasets,
+                showLegend: datasets.length > 1,
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: 'rgba(0,0,0,0.08)' },
+                            title: { display: datasets.length > 0, text: 'bpm' }
+                        },
+                        y1: {
+                            beginAtZero: true,
+                            min: 0,
+                            max: 100,
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            title: { display: datasets.length > 1, text: '%' }
+                        }
+                    }
+                }
+            });
+
+            if (latestHeartRate) {
+                let valueText = `${formatNumericValue(latestHeartRate.value, 0) || latestHeartRate.value} bpm`;
+                if (latestAf && typeof latestAf.value === 'number') {
+                    valueText += ` • AF ${formatNumericValue(latestAf.value, 0)}%`;
+                }
+                setGraphValueText('heartRate', valueText);
+            } else if (latestAf) {
+                setGraphValueText('heartRate', `AF ${formatNumericValue(latestAf.value, 0)}%`);
+            } else {
+                setGraphValueText('heartRate', 'Värde saknas');
+            }
+        }
+
+        function updateWeightChart(entries, latest) {
+            const canvasId = chartCanvasIdMap.weight;
+            if (!canvasId) return;
+
+            if (!Array.isArray(entries) || !entries.length) {
+                renderChartOrEmpty('weight', canvasId, null, 'Ingen data tillgänglig');
+                setGraphValueText('weight', 'Värde saknas');
+                return;
+            }
+
+            const timeline = buildTimelineLabels([entries]);
+            renderChartOrEmpty('weight', canvasId, {
+                labels: timeline.labels,
+                datasets: [{
+                    label: 'Vikt',
+                    data: mapEntriesToSeries(timeline.keys, entries, entry => entry.value ?? null),
+                    borderColor: '#0ea5e9',
+                    backgroundColor: 'rgba(14,165,233,0.2)',
+                    tension: 0.35,
+                    fill: true,
+                    spanGaps: true
+                }]
+            });
+
+            if (latest) {
+                setGraphValueText('weight', `${formatNumericValue(latest.value) || latest.value} ${latest.unit || 'kg'}`);
+            } else {
+                setGraphValueText('weight', 'Värde saknas');
+            }
+        }
+
+        function updateOxygenChart(entries, latest) {
+            const canvasId = chartCanvasIdMap.oxygen;
+            if (!canvasId) return;
+
+            if (!Array.isArray(entries) || !entries.length) {
+                setGraphCardTitle('ntprobnp', 'NT-proBNP');
+                renderChartOrEmpty('oxygen', canvasId, null, 'Ingen data tillgänglig');
+                setGraphValueText('ntprobnp', 'Värde saknas');
+                return;
+            }
+
+            setGraphCardTitle('ntprobnp', 'Syresättning över tid');
+
+            const timeline = buildTimelineLabels([entries]);
+            renderChartOrEmpty('oxygen', canvasId, {
+                labels: timeline.labels,
+                datasets: [{
+                    label: 'SpO₂',
+                    data: mapEntriesToSeries(timeline.keys, entries, entry => entry.value ?? null),
+                    borderColor: '#14b8a6',
+                    backgroundColor: 'rgba(20,184,166,0.2)',
+                    tension: 0.35,
+                    fill: true,
+                    spanGaps: true
+                }],
+                options: {
+                    scales: {
+                        y: {
+                            suggestedMin: 80,
+                            suggestedMax: 100,
+                            ticks: {
+                                callback: value => `${value}%`
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (latest) {
+                setGraphValueText('ntprobnp', `${formatNumericValue(latest.value, 0) || latest.value}%`);
+            } else {
+                setGraphValueText('ntprobnp', 'Värde saknas');
+            }
+        }
+
+        function updateRiskLabChart(metrics) {
+            const canvasId = chartCanvasIdMap.ldl;
+            if (!canvasId) return;
+
+            const seriesConfig = [
+                { key: 'ldl', label: 'LDL', short: 'LDL', color: '#ef4444' },
+                { key: 'hdl', label: 'HDL', short: 'HDL', color: '#3b82f6' },
+                { key: 'totalCholesterol', label: 'Totalkolesterol', short: 'Tot', color: '#a855f7' },
+                { key: 'triglycerides', label: 'Triglycerider', short: 'TG', color: '#f59e0b' }
+            ];
+
+            const datasets = [];
+            const availableTrends = [];
+
+            seriesConfig.forEach(config => {
+                const entries = metrics.trends?.[config.key];
+                if (Array.isArray(entries) && entries.length) {
+                    availableTrends.push(entries);
+                }
+            });
+
+            if (!availableTrends.length) {
+                renderChartOrEmpty('ldl', canvasId, null, 'Ingen data tillgänglig');
+                setGraphValueText('ldl', 'Värde saknas');
+                return;
+            }
+
+            const timeline = buildTimelineLabels(availableTrends);
+
+            seriesConfig.forEach(config => {
+                const entries = metrics.trends?.[config.key];
+                if (!Array.isArray(entries) || !entries.length) return;
+                datasets.push({
+                    label: config.label,
+                    data: mapEntriesToSeries(timeline.keys, entries, entry => entry.value ?? null),
+                    borderColor: config.color,
+                    backgroundColor: config.color + '33',
+                    tension: 0.35,
+                    fill: false,
+                    spanGaps: true
+                });
+            });
+
+            renderChartOrEmpty('ldl', canvasId, {
+                labels: timeline.labels,
+                datasets,
+                showLegend: true
+            });
+
+            const summaryPieces = [];
+            seriesConfig.forEach(config => {
+                const latest = metrics.latest?.[config.key];
+                if (latest && typeof latest.value === 'number') {
+                    const numeric = formatNumericValue(latest.value) || latest.value;
+                    summaryPieces.push(`${config.short || config.label} ${numeric}`);
+                }
+            });
+            if (summaryPieces.length) {
+                setGraphValueBadges('ldl', summaryPieces);
+            } else {
+                setGraphValueText('ldl', 'Värde saknas');
+            }
+        }
+
+        function updateGlucoseChart(entries, latest) {
+            const canvasId = chartCanvasIdMap.glucose;
+            if (!canvasId) return;
+
+            if (!Array.isArray(entries) || !entries.length) {
+                renderChartOrEmpty('glucose', canvasId, null, 'Ingen data tillgänglig');
+                setGraphValueText('glucose', 'Värde saknas');
+                return;
+            }
+
+            const timeline = buildTimelineLabels([entries]);
+            renderChartOrEmpty('glucose', canvasId, {
+                labels: timeline.labels,
+                datasets: [{
+                    label: 'HbA1c / Glukos',
+                    data: mapEntriesToSeries(timeline.keys, entries, entry => entry.value ?? null),
+                    borderColor: '#9333ea',
+                    backgroundColor: 'rgba(147,51,234,0.15)',
+                    tension: 0.35,
+                    fill: true,
+                    spanGaps: true
+                }]
+            });
+
+            if (latest) {
+                setGraphValueText('glucose', `${formatNumericValue(latest.value) || latest.value} ${latest.unit || 'mmol/L'}`);
+            } else {
+                setGraphValueText('glucose', 'Värde saknas');
+            }
+        }
+
+        function updateEgfrChart(entries, latest) {
+            const canvasId = chartCanvasIdMap.egfr;
+            if (!canvasId) return;
+
+            if (!Array.isArray(entries) || !entries.length) {
+                renderChartOrEmpty('egfr', canvasId, null, 'Ingen data tillgänglig');
+                setGraphValueText('egfr', 'Värde saknas');
+                return;
+            }
+
+            const timeline = buildTimelineLabels([entries]);
+            renderChartOrEmpty('egfr', canvasId, {
+                labels: timeline.labels,
+                datasets: [{
+                    label: 'eGFR',
+                    data: mapEntriesToSeries(timeline.keys, entries, entry => entry.value ?? null),
+                    borderColor: '#0f172a',
+                    backgroundColor: 'rgba(15,23,42,0.15)',
+                    tension: 0.35,
+                    fill: true,
+                    spanGaps: true
+                }]
+            });
+
+            if (latest) {
+                setGraphValueText('egfr', `${formatNumericValue(latest.value) || latest.value} ${latest.unit || 'mL/min'}`);
+            } else {
+                setGraphValueText('egfr', 'Värde saknas');
+            }
+        }
+
+        function setGraphValueText(key, text) {
+            const target = graphValueElements[key];
+            if (!target) return;
+            target.classList.remove('graph-value-multi');
+            target.innerHTML = '';
+            target.textContent = text || 'Värde saknas';
+        }
+
+        function setGraphValueBadges(key, items) {
+            const target = graphValueElements[key];
+            if (!target) return;
+            if (!Array.isArray(items) || !items.length) {
+                setGraphValueText(key, 'Värde saknas');
+                return;
+            }
+            target.classList.add('graph-value-multi');
+            target.innerHTML = items.map(item => `<span class="graph-value-badge">${item}</span>`).join('');
+        }
+
+        function setGraphCardTitle(chartKey, title) {
+            const header = document.querySelector(`[data-chart-key="${chartKey}"] .graph-card-header h3`);
+            if (header && title) {
+                header.textContent = title;
+            }
+        }
+
+        function renderChartOrEmpty(key, canvasId, config, emptyMessage = 'Ingen data tillgänglig') {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            if (dashboardCharts[key]) {
+                dashboardCharts[key].destroy();
+                dashboardCharts[key] = null;
+            }
+
+            if (!config || !config.labels || !config.datasets || config.datasets.every(ds => !ds || !Array.isArray(ds.data) || ds.data.every(value => value === null || typeof value === 'undefined'))) {
+                dashboardCharts[key] = new Chart(ctx, createEmptyChartConfig(emptyMessage, config?.type || 'line'));
+                return;
+            }
+
+            dashboardCharts[key] = new Chart(ctx, {
+                type: config.type || 'line',
+                data: {
+                    labels: config.labels,
+                    datasets: config.datasets
+                },
+                options: Object.assign({
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: config.showLegend !== false },
+                        tooltip: { intersect: false }
+                    },
+                    scales: config.options?.scales || {
+                        x: { grid: { display: false } },
+                        y: { grid: { color: 'rgba(0,0,0,0.08)' }, beginAtZero: false }
+                    }
+                }, config.options || {})
+            });
+        }
+
+        function createEmptyChartConfig(message, type) {
+            return {
+                type: type || 'line',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false }
+                    }
+                },
+                plugins: [{
+                    id: 'empty-state',
+                    afterDraw: chart => {
+                        const ctx = chart.ctx;
+                        const { width, height } = chart;
+                        ctx.save();
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.font = '14px system-ui';
+                        ctx.fillStyle = '#9ca3af';
+                        ctx.fillText(message, width / 2, height / 2);
+                        ctx.restore();
+                    }
+                }]
+            };
+        }
+
+        function buildTimelineLabels(entryGroups) {
+            const keys = [];
+            entryGroups.forEach(group => {
+                if (!Array.isArray(group)) return;
+                group.forEach((entry, index) => {
+                    const key = buildLabelKey(entry, index);
+                    if (!keys.includes(key)) {
+                        keys.push(key);
+                    }
+                });
+            });
+
+            keys.sort((a, b) => {
+                const isOrderA = a.startsWith('order-') || a.startsWith('row-');
+                const isOrderB = b.startsWith('order-') || b.startsWith('row-');
+                if (isOrderA && isOrderB) {
+                    return a.localeCompare(b, undefined, { numeric: true });
+                }
+                if (isOrderA) return 1;
+                if (isOrderB) return -1;
+                return new Date(a) - new Date(b);
+            });
+
+            return {
+                keys,
+                labels: keys.map(formatTimestampLabel)
+            };
+        }
+
+        function buildLabelKey(entry, index) {
+            if (entry?.timestamp) return entry.timestamp;
+            if (typeof entry?.order !== 'undefined') {
+                return `order-${entry.order}`;
+            }
+            return `row-${index}`;
+        }
+
+        function mapEntriesToSeries(labelKeys, entries, getter) {
+            const lookup = new Map();
+            entries.forEach((entry, index) => {
+                const key = buildLabelKey(entry, index);
+                if (!lookup.has(key)) {
+                    lookup.set(key, getter(entry));
+                }
+            });
+            return labelKeys.map(key => lookup.has(key) ? lookup.get(key) : null);
+        }
+
+        function formatTimestampLabel(key) {
+            if (!key) return '';
+            if (key.startsWith('order-') || key.startsWith('row-')) {
+                return key.replace(/^(order|row)-/, 'Mätning ');
+            }
+            const date = new Date(key);
+            if (Number.isNaN(date.valueOf())) return key;
+            return date.toLocaleDateString('sv-SE', { month: 'short', day: 'numeric' });
+        }
+
+        const MAX_HEART_RATE_POINTS = 60;
+
+        function maybeAggregateTrendSeries(entries, options = {}) {
+            if (!Array.isArray(entries) || !entries.length) return [];
+            const { maxPoints = MAX_HEART_RATE_POINTS } = options;
+            if (entries.length <= maxPoints) {
+                return entries;
+            }
+            if (!entries.some(entry => entry?.timestamp)) {
+                return entries;
+            }
+            const buckets = new Map();
+            entries.forEach(entry => {
+                const bucketKey = getMonthlyBucketKey(entry.timestamp);
+                if (!bucketKey) return;
+                const bucket = buckets.get(bucketKey) || {
+                    key: bucketKey,
+                    sum: 0,
+                    count: 0,
+                    template: entry
+                };
+                const value = typeof entry.value === 'number' ? entry.value : null;
+                if (value !== null && !Number.isNaN(value)) {
+                    bucket.sum += value;
+                    bucket.count += 1;
+                }
+                buckets.set(bucketKey, bucket);
+            });
+            const aggregated = [];
+            buckets.forEach(bucket => {
+                const avg = bucket.count ? bucket.sum / bucket.count : null;
+                aggregated.push({
+                    ...bucket.template,
+                    value: avg,
+                    timestamp: buildBucketTimestamp(bucket.key)
+                });
+            });
+            return aggregated.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        }
+
+        function getMonthlyBucketKey(timestamp) {
+            if (!timestamp) return null;
+            const date = new Date(timestamp);
+            if (Number.isNaN(date.valueOf())) return null;
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            return `${year}-${month}`;
+        }
+
+        function buildBucketTimestamp(bucketKey) {
+            if (!bucketKey) return null;
+            return `${bucketKey}-01T00:00:00.000Z`;
+        }
+
+        function formatNumericValue(value, decimals = 1) {
+            if (value === null || value === undefined) return null;
+            const number = Number(value);
+            if (Number.isNaN(number)) return null;
+            return number.toLocaleString('sv-SE', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: decimals
+            });
+        }
+
+        function combineExcelMetrics(metricList) {
+            if (!Array.isArray(metricList) || !metricList.length) return null;
+            const combined = createEmptyCombinedMetrics();
+
+            metricList.forEach(metrics => {
+                if (!metrics) return;
+                mergeBloodPressureLatest(combined.latest, metrics.latest?.bloodPressure);
+
+                const numericKeys = [
+                    'heartRate',
+                    'oxygenSaturation',
+                    'weight',
+                    'ldl',
+                    'hdl',
+                    'totalCholesterol',
+                    'triglycerides',
+                    'glucose',
+                    'egfr',
+                    'steps',
+                    'sleep',
+                    'afBurden'
+                ];
+
+                numericKeys.forEach(key => {
+                    mergeLatestMetric(combined.latest, metrics.latest, key);
+                    mergeTrendSeries(combined.trends, metrics.trends, key);
+                });
+
+                mergeTrendSeries(combined.trends, metrics.trends, 'bloodPressure');
+            });
+
+            Object.values(combined.trends).forEach(entries => {
+                if (!Array.isArray(entries)) return;
+                entries.sort((a, b) => {
+                    const keyA = a.timestamp || a.order || 0;
+                    const keyB = b.timestamp || b.order || 0;
+                    return new Date(keyA) - new Date(keyB);
+                });
+            });
+
+            return combined;
+        }
+
+        function createEmptyCombinedMetrics() {
+            return {
+                latest: {
+                    bloodPressure: null,
+                    heartRate: null,
+                    oxygenSaturation: null,
+                    weight: null,
+                    ldl: null,
+                    hdl: null,
+                    totalCholesterol: null,
+                    triglycerides: null,
+                    glucose: null,
+                    egfr: null,
+                    steps: null,
+                    sleep: null,
+                    afBurden: null
+                },
+                trends: {
+                    bloodPressure: [],
+                    heartRate: [],
+                    oxygenSaturation: [],
+                    weight: [],
+                    ldl: [],
+                    hdl: [],
+                    totalCholesterol: [],
+                    triglycerides: [],
+                    glucose: [],
+                    egfr: [],
+                    steps: [],
+                    sleep: [],
+                    afBurden: []
+                }
+            };
+        }
+
+        function mergeBloodPressureLatest(targetLatest, candidate) {
+            if (!candidate) return;
+            const current = targetLatest.bloodPressure;
+            if (!current || isCandidateNewer(current, candidate)) {
+                targetLatest.bloodPressure = candidate;
+            }
+        }
+
+        function mergeLatestMetric(targetLatest, sourceLatest, key) {
+            const candidate = sourceLatest?.[key];
+            if (!candidate) return;
+            const current = targetLatest[key];
+            if (!current || isCandidateNewer(current, candidate)) {
+                targetLatest[key] = candidate;
+            }
+        }
+
+        function mergeTrendSeries(targetTrends, sourceTrends, key) {
+            if (!sourceTrends || !Array.isArray(sourceTrends[key]) || !sourceTrends[key].length) return;
+            targetTrends[key] = targetTrends[key] || [];
+            targetTrends[key].push(...sourceTrends[key]);
+        }
+
+        function isCandidateNewer(current, candidate) {
+            if (!candidate) return false;
+            if (!current) return true;
+            if (candidate.timestamp && current.timestamp) {
+                return new Date(candidate.timestamp) >= new Date(current.timestamp);
+            }
+            if (candidate.timestamp && !current.timestamp) return true;
+            if (!candidate.timestamp && current.timestamp) return false;
+            return (candidate.order || 0) >= (current.order || 0);
+        }
+
         async function loadUploadedFiles() {
             if (!currentTransferId) {
                 console.log('No transfer ID available for loading files');
                 uploadedFiles = [];
                 updateFileDisplay();
+                // Clear overlay flag so it shows again when files are uploaded
+                localStorage.removeItem(DASHBOARD_WAITING_OVERLAY_KEY);
+                finishImportOverlay({ immediate: true });
                 return;
             }
 
@@ -297,6 +1304,10 @@
                 
                 if (response.ok) {
                     const data = await response.json();
+                    if (data.status === 'cancelled') {
+                        handleSessionTerminatedByPatient();
+                        return;
+                    }
                     console.log('Loaded files data from API:', data);
                     console.log('Files array:', data.files);
                     
@@ -309,6 +1320,8 @@
                     
                     // Display files if we have any
                     if (uploadedFiles.length > 0) {
+                        console.log('✅ Files found on initial load:', uploadedFiles.length);
+                        
                         // Clear old localStorage file data before saving new
                         Object.keys(localStorage).forEach(key => {
                             if (key.startsWith('mmd_files_') || key === 'uploadedFiles') {
@@ -318,17 +1331,39 @@
                         
                         saveFilesToStorage(); // Save to localStorage for this session
                         updateFileDisplay();
+                        updateFileCount();
+                        updateProvsvarStatus();
+                        
+                        // Hide waiting overlay immediately since we have files
+                        markWaitingOverlaySeen();
+                        if (importOverlayState.mode === 'waiting') {
+                            finishImportOverlay({ immediate: true });
+                        }
                         
                         // Show notification for mobile files
                         showFileNotification({ size: 0 }); // Special notification for mobile files
                         
                         // Load imported journal notes if any PDF files exist
                         await loadImportedJournalNotes();
+                        
+                        // Load Excel insights - this will show/hide the import overlay as needed
+                        await loadExcelInsights(uploadedFiles);
                     } else {
                         // No files found - ensure everything is cleared
                         uploadedFiles = [];
+                        lastServerFileCount = 0; // Reset count so we can detect new files
                         updateFileDisplay();
+                        updateFileCount();
+                        updateProvsvarStatus();
                         console.log('No files found for this transfer - clean state');
+                        // Clear overlay flag so it shows again when files are uploaded
+                        localStorage.removeItem(DASHBOARD_WAITING_OVERLAY_KEY);
+                        if (currentTransferId) {
+                            showImportOverlay(0, { mode: 'waiting' });
+                        } else {
+                            finishImportOverlay({ immediate: true });
+                        }
+                        await loadExcelInsights([]);
                     }
                 } else {
                     const errorText = await response.text();
@@ -339,7 +1374,15 @@
                     uploadedFiles = [];
                     lastServerFileCount = 0;
                     updateFileDisplay();
+                    updateFileCount();
+                    updateProvsvarStatus();
                     console.log('API failed - cleared all data');
+                    if (currentTransferId) {
+                        showImportOverlay(0, { mode: 'waiting' });
+                    } else {
+                        finishImportOverlay({ immediate: true });
+                    }
+                    await loadExcelInsights([]);
                 }
             } catch (error) {
                 console.error('Failed to load uploaded files from mobile app:', error);
@@ -347,6 +1390,14 @@
                 uploadedFiles = [];
                 lastServerFileCount = 0;
                 updateFileDisplay();
+                updateFileCount();
+                updateProvsvarStatus();
+                if (currentTransferId) {
+                    showImportOverlay(0, { mode: 'waiting' });
+                } else {
+                    finishImportOverlay({ immediate: true });
+                }
+                await loadExcelInsights([]);
             }
         }
 
@@ -453,7 +1504,8 @@
         function createPDFJournalCard(pdfFile, parsedData) {
             const card = document.createElement('div');
             card.className = 'journal-entry pdf-journal-entry';
-            card.onclick = () => toggleJournalEntry(card);
+            card.style.cursor = 'pointer';
+            card.onclick = () => showPDFPreview(currentTransferId, encodeURIComponent(pdfFile.name), pdfFile.name);
             
             // Use the parsed data from the server
             const title = parsedData.title || generatePDFTitle(parsedData.content, pdfFile.name);
@@ -469,18 +1521,6 @@
                         <p class="journal-date">${date}</p>
                         <p class="journal-summary">${summary}</p>
                     </div>
-                    <div class="chevron">›</div>
-                </div>
-                <div class="journal-details">
-                    <div class="journal-actions">
-                        <button class="gpt-summarize-btn" onclick="event.stopPropagation(); summarizeWithGPT(this)">
-                            <img src="Assets/halsa-gpt.png" alt="Hälsa+GPT" style="width: 16px; height: 16px;">
-                            Summera med Hälsa+GPT
-                        </button>
-                    </div>
-                    <div class="journal-content-detail">
-                        ${formatStructuredContent(parsedData.content)}
-                    </div>
                 </div>
             `;
             
@@ -490,7 +1530,8 @@
         function createBasicPDFCard(pdfFile) {
             const card = document.createElement('div');
             card.className = 'journal-entry pdf-journal-entry';
-            card.onclick = () => toggleJournalEntry(card);
+            card.style.cursor = 'pointer';
+            card.onclick = () => showPDFPreview(currentTransferId, encodeURIComponent(pdfFile.name), pdfFile.name);
             
             const uploadDate = new Date(pdfFile.uploadedAt || Date.now()).toLocaleDateString('sv-SE');
             
@@ -501,21 +1542,6 @@
                         <p class="journal-doctor">Importerad från PDF</p>
                         <p class="journal-date">${uploadDate}</p>
                         <p class="journal-summary">PDF-fil importerad från mobilen. Innehåll kunde inte analyseras.</p>
-                    </div>
-                    <div class="chevron">›</div>
-                </div>
-                <div class="journal-details">
-                    <div class="journal-actions">
-                        <button class="gpt-summarize-btn" onclick="event.stopPropagation(); summarizeWithGPT(this)">
-                            <img src="Assets/halsa-gpt.png" alt="Hälsa+GPT" style="width: 16px; height: 16px;">
-                            Summera med Hälsa+GPT
-                        </button>
-                    </div>
-                    <div class="journal-content-detail">
-                        <h4>PDF-fil:</h4>
-                        <p>Filnamn: ${pdfFile.name}</p>
-                        <p>Storlek: ${Math.round(pdfFile.size / 1024)} KB</p>
-                        <p>Typ: ${pdfFile.mimetype}</p>
                     </div>
                 </div>
             `;
@@ -618,11 +1644,26 @@
             console.log('EventSource not available for cross-origin serverless apps - using polling instead');
             
             // CRITICAL: Store initial file count to detect NEW uploads only
-            lastServerFileCount = uploadedFiles.length;
-            console.log('Starting file event stream with current file count:', lastServerFileCount);
+            // If lastServerFileCount is not set yet, use current uploadedFiles length
+            if (lastServerFileCount === undefined || lastServerFileCount === null) {
+                lastServerFileCount = uploadedFiles.length;
+            }
+            console.log('Starting file event stream with current file count:', lastServerFileCount, 'uploadedFiles:', uploadedFiles.length);
             
-            // Start polling for new files every 10 seconds
+            // Clear any existing poller before starting a new one
+            if (filePollIntervalId) {
+                clearInterval(filePollIntervalId);
+                filePollIntervalId = null;
+            }
+
+            let pollInFlight = false;
+
+            // Start polling for new files every 2 seconds
             const pollForFiles = async () => {
+                if (pollInFlight) {
+                    return;
+                }
+                pollInFlight = true;
                 try {
                     const response = await fetch(`/api/files?transferId=${currentTransferId}`, {
                         cache: 'no-store',
@@ -632,47 +1673,85 @@
                     });
                     if (response.ok) {
                         const data = await response.json();
+                        if (data.status === 'cancelled') {
+                            handleSessionTerminatedByPatient();
+                            return;
+                        }
                         const serverFiles = data.files || [];
+                        const hasFiles = serverFiles.length > 0;
+                        const isNewFiles = serverFiles.length > lastServerFileCount;
+                        const isFirstDetection = lastServerFileCount === 0 && hasFiles;
                         
-                        // CRITICAL: Only update if we have MORE files than when we started
-                        // This ensures we only show files uploaded in THIS session
-                        if (serverFiles.length > lastServerFileCount) {
-                            console.log('New files detected, refreshing display');
+                        console.log('Polling result:', {
+                            serverFiles: serverFiles.length,
+                            lastCount: lastServerFileCount,
+                            hasFiles: hasFiles,
+                            isNewFiles: isNewFiles,
+                            isFirstDetection: isFirstDetection,
+                            currentMode: importOverlayState.mode
+                        });
+                        
+                        // Update if we have files (new or existing) and they differ from what we have
+                        if (hasFiles && (isNewFiles || isFirstDetection || JSON.stringify(serverFiles.map(f => f.name)) !== JSON.stringify(uploadedFiles.map(f => f.name)))) {
+                            console.log('Updating files display');
                             
-                            // Only get the NEW files (after last count)
-                            const newFiles = serverFiles.slice(lastServerFileCount);
+                            // Only get the NEW files (after last count) for notifications
+                            const newFiles = isNewFiles ? serverFiles.slice(lastServerFileCount) : [];
                             
-                            // Show notification for each new file
+                            // Show notification for each new file (only once per file)
                             newFiles.forEach(file => {
-                                showFileNotification(file);
+                                const fileKey = `${file.name}-${file.uploadedAt}`;
+                                if (!notifiedFiles.has(fileKey)) {
+                                    showFileNotification(file);
+                                    notifiedFiles.add(fileKey);
+                                }
                             });
                             
-                            // Update with all files from server (but only new ones trigger notification)
+                            // Update with all files from server
                             uploadedFiles = serverFiles;
                             saveFilesToStorage();
                             updateFileDisplay();
+                            updateFileCount();
+                            updateProvsvarStatus();
+                            
+                            // Hide waiting overlay if we have files
+                            markWaitingOverlaySeen();
+                            if (importOverlayState.mode === 'waiting') {
+                                console.log('Hiding waiting overlay - files detected');
+                                finishImportOverlay({ immediate: true });
+                            }
+                            
                             await loadImportedJournalNotes();
+                            // Load Excel insights - this will show/hide the import overlay as needed
+                            await loadExcelInsights(uploadedFiles);
                             lastServerFileCount = serverFiles.length;
                         } else if (serverFiles.length < lastServerFileCount) {
                             // Server has fewer files - reset to server state (logout cleared them)
                             console.log('Server has fewer files - resetting to server state');
                             uploadedFiles = serverFiles;
                             updateFileDisplay();
+                             updateFileCount();
+                             updateProvsvarStatus();
                             lastServerFileCount = serverFiles.length;
                         }
                     }
                 } catch (error) {
                     console.error('Failed to poll for new files:', error);
+                } finally {
+                    pollInFlight = false;
                 }
             };
             
-            // Poll immediately and then every 10 seconds
+            // Poll immediately and then every 2 seconds
             pollForFiles();
-            setInterval(pollForFiles, 10000);
+            filePollIntervalId = setInterval(pollForFiles, 2000);
         }
 
         function updateFileDisplay() {
             const categoriesContainer = document.getElementById('file-categories');
+            if (!categoriesContainer) {
+                return;
+            }
             console.log('=== UPDATE FILE DISPLAY ===');
             console.log('Updating file display with', uploadedFiles.length, 'files');
             console.log('Files array:', uploadedFiles);
@@ -693,7 +1772,7 @@
             categoriesContainer.innerHTML = '';
             
             const categoryConfigs = [
-                { key: 'excel', name: 'Provsvar', icon: '' },
+                { key: 'excel', name: 'Data', icon: '' },
                 { key: 'pdf', name: 'Journalanteckningar', icon: '' }
             ];
 
@@ -711,6 +1790,7 @@
             console.log(`Total files displayed: ${totalDisplayed}`);
             console.log('=== END UPDATE FILE DISPLAY ===');
             updateProvsvarStatus();
+            updateFileCount();
         }
 
         function updateProvsvarStatus() {
@@ -728,6 +1808,150 @@
             indicator.classList.remove('good', 'bad');
             indicator.classList.add(hasExcelData ? 'good' : 'bad');
             stateEl.textContent = hasExcelData ? 'Data tillgänglig' : 'Ingen data tillgänglig';
+            
+            // Update Journalanteckningar card status
+            const journalCards = document.querySelectorAll('.organ-item');
+            journalCards.forEach(card => {
+                const title = card.querySelector('.organ-name');
+                if (title && title.textContent === 'Journalanteckningar') {
+                    const indicator = card.querySelector('.status-indicator');
+                    const stateEl = card.querySelector('.data-count');
+                    if (indicator && stateEl) {
+                        const pdfFiles = uploadedFiles.filter(file =>
+                            file.mimetype === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+                        );
+                        indicator.classList.remove('good', 'bad', 'neutral');
+                        indicator.classList.add(pdfFiles.length > 0 ? 'good' : 'bad');
+                        stateEl.textContent = pdfFiles.length > 0 ? `${pdfFiles.length} journalanteckning${pdfFiles.length > 1 ? 'ar' : ''}` : 'Ingen data tillgänglig';
+                    }
+                }
+            });
+        }
+
+        async function loadExcelInsights(files) {
+            if (!Array.isArray(files) || files.length === 0) {
+                excelAnalyticsState.combinedMetrics = null;
+                excelAnalyticsState.files = [];
+                resetExcelDrivenUI();
+                return;
+            }
+
+            const analytics = await loadExcelAnalytics(files);
+            if (analytics && analytics.combinedMetrics) {
+                excelAnalyticsState.combinedMetrics = analytics.combinedMetrics;
+                excelAnalyticsState.files = analytics.files;
+                applyExcelMetricsToUI(analytics.combinedMetrics);
+                // Hide overlay after Excel is loaded
+                finishImportOverlay();
+            } else {
+                excelAnalyticsState.combinedMetrics = null;
+                excelAnalyticsState.files = [];
+                resetExcelDrivenUI();
+                // If we have files but no Excel, hide the waiting overlay
+                if (files.length > 0) {
+                    finishImportOverlay({ immediate: true });
+                }
+            }
+        }
+
+        async function loadExcelAnalytics(files) {
+            if (!currentTransferId || !Array.isArray(files) || !files.length) return null;
+
+            const excelFiles = files.filter(file =>
+                file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                file.mimetype === 'application/vnd.ms-excel' ||
+                file.name.toLowerCase().endsWith('.xlsx') ||
+                file.name.toLowerCase().endsWith('.xls')
+            );
+
+            if (!excelFiles.length) {
+                return null;
+            }
+
+            showImportOverlay(excelFiles.length, { mode: 'import', force: true });
+
+            const parsedFiles = [];
+            let completed = 0;
+
+            for (const file of excelFiles) {
+                const cacheKey = getExcelCacheKey(currentTransferId, file.name);
+                let parsed = getCachedExcelData(cacheKey, file.uploadedAt);
+
+                if (!parsed) {
+                    try {
+                        console.log('Loading Excel file:', file.name);
+                        const url = `/api/excel-content?transferId=${currentTransferId}&filename=${encodeURIComponent(file.name)}&dash=${Date.now()}`;
+                        const resp = await fetch(url, { cache: 'no-store' });
+                        if (!resp.ok) {
+                            const errorText = await resp.text();
+                            console.error(`Failed to load excel data (${resp.status}):`, errorText);
+                            throw new Error(`Failed to load excel data (${resp.status}): ${errorText}`);
+                        }
+                        parsed = await resp.json();
+                        console.log('Excel data loaded successfully:', parsed);
+                        if (parsed.error) {
+                            console.error('Excel parsing error:', parsed.error, parsed.details);
+                            continue;
+                        }
+                        setCachedExcelData(cacheKey, file.uploadedAt, parsed);
+                    } catch (error) {
+                        console.error('Prefetch excel failed:', error);
+                        continue;
+                    }
+                }
+
+                if (parsed && !parsed.error) {
+                    parsedFiles.push({ file, data: parsed });
+                }
+
+                completed += 1;
+                updateImportOverlayProgress(completed, excelFiles.length);
+            }
+
+            finishImportOverlay();
+
+            if (!parsedFiles.length) {
+                return null;
+            }
+
+            const metricsList = parsedFiles
+                .map(entry => entry.data?.metrics)
+                .filter(Boolean);
+
+            if (!metricsList.length) {
+                return null;
+            }
+
+            const combinedMetrics = combineExcelMetrics(metricsList);
+            return { combinedMetrics, files: parsedFiles };
+        }
+
+        function getExcelCacheKey(transferId, filename) {
+            return `excel_cache_${transferId}_${filename}`;
+        }
+
+        function getCachedExcelData(cacheKey, uploadedAt) {
+            try {
+                const cached = localStorage.getItem(cacheKey);
+                if (!cached) return null;
+                const parsed = JSON.parse(cached);
+                if (!parsed || !parsed.data) return null;
+                if (uploadedAt && parsed.uploadedAt && parsed.uploadedAt !== uploadedAt) {
+                    return null;
+                }
+                return parsed.data;
+            } catch (error) {
+                console.warn('Failed to read cached excel data', error);
+                return null;
+            }
+        }
+
+        function setCachedExcelData(cacheKey, uploadedAt, data) {
+            try {
+                localStorage.setItem(cacheKey, JSON.stringify({ uploadedAt, data }));
+            } catch (error) {
+                console.warn('Failed to cache excel data', error);
+            }
         }
 
         function createCategoryElement(config, files) {
@@ -755,15 +1979,29 @@
                 const fileType = file.mimetype === 'application/pdf' ? 'pdf' : 'excel';
                 const fileDate = new Date(file.uploadedAt).toLocaleDateString('sv-SE');
                 
-                fileItem.innerHTML = `
-                    <div class="file-info">
-                        <div class="file-name file-type-${fileType}">${file.name}</div>
-                        <div class="file-details">
-                            <span class="file-date">${fileDate}</span>
-                            <span class="file-size">${Math.round(file.size/1024)} KB</span>
+                if (fileType === 'pdf') {
+                    // For PDFs, create a clickable item that shows preview
+                    fileItem.innerHTML = `
+                        <div class="file-info" style="cursor: pointer;" onclick="event.stopPropagation(); showPDFPreview('${currentTransferId}', '${encodeURIComponent(file.name)}', '${file.name}')">
+                            <div class="file-name file-type-${fileType}">${file.name}</div>
+                            <div class="file-details">
+                                <span class="file-date">${fileDate}</span>
+                                <span class="file-size">${Math.round(file.size/1024)} KB</span>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                } else {
+                    // For Excel files, just show info
+                    fileItem.innerHTML = `
+                        <div class="file-info">
+                            <div class="file-name file-type-${fileType}">${file.name}</div>
+                            <div class="file-details">
+                                <span class="file-date">${fileDate}</span>
+                                <span class="file-size">${Math.round(file.size/1024)} KB</span>
+                            </div>
+                        </div>
+                    `;
+                }
                 
                 fileList.appendChild(fileItem);
             });
@@ -866,44 +2104,31 @@
             const notification = document.createElement('div');
             notification.style.cssText = `
                 position: fixed;
-                top: 20px;
-                right: 20px;
-                background: white;
-                color: #1f2937;
+                top: 24px;
+                right: 24px;
+                background: #0f172a;
+                color: white;
                 padding: 16px 24px;
-                border-radius: 12px;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+                border-radius: 14px;
+                border: 1px solid rgba(148,163,184,0.25);
+                box-shadow: 0 20px 40px rgba(15,23,42,0.35);
                 z-index: 10000;
                 font-size: 14px;
                 max-width: 500px;
                 white-space: nowrap;
-                border: 1px solid #e5e7eb;
                 animation: slideIn 0.3s ease-out;
             `;
             
             if (file.size === 0) {
-                const sessionId = localStorage.getItem('sessionStartTime') || 'default';
-                const alreadyShown = localStorage.getItem('uploadNotificationShownForSession');
-                if (alreadyShown === sessionId) {
-                    return;
-                }
-                localStorage.setItem('uploadNotificationShownForSession', sessionId);
-                // Special case for welcome message
-                notification.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 12px; height: 12px; background: #059669; border-radius: 50%; flex-shrink: 0;"></div>
-                        <div>
-                            <div style="font-weight: 600;">Filer från patientens mobil har laddats upp</div>
-                        </div>
-                    </div>
-                `;
+                notification.remove();
+                return;
             } else {
                 notification.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 12px; height: 12px; background: #059669; border-radius: 50%; flex-shrink: 0;"></div>
+                        <div style="width: 12px; height: 12px; background: #10B981; border-radius: 50%; flex-shrink: 0;"></div>
                         <div>
                             <div style="font-weight: 600;">Ny fil mottagen</div>
-                            <div style="font-size: 12px; color: #6b7280;">${file.name}</div>
+                            <div style="font-size: 12px; color: #94a3b8;">${file.name}</div>
                         </div>
                     </div>
                 `;
@@ -929,6 +2154,15 @@
                     style.remove();
                 }, 300);
             }, 4000);
+        }
+
+        function handleSessionTerminatedByPatient() {
+            sessionStorage.setItem('session_notice', 'Patienten har avslutat sessionen');
+            clearAllFiles();
+            localStorage.removeItem('sessionStartTime');
+            localStorage.removeItem('currentTransferId');
+            localStorage.removeItem('currentPatientName');
+            window.location.href = 'login.html';
         }
 
         async function refreshUploadedFiles() {
@@ -963,6 +2197,13 @@
             }
         }
 
+        function updateFileCount() {
+            const fileCountEl = document.getElementById('fileCountValue');
+            if (fileCountEl) {
+                fileCountEl.textContent = uploadedFiles.length.toString();
+            }
+        }
+
         function showEmptyJournalState() {
             const journalContent = document.querySelector('.journal-content');
             if (journalContent && journalContent.children.length === 0) {
@@ -982,7 +2223,7 @@
             
             // Clear ALL localStorage file data
             Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('mmd_files_') || key === 'uploadedFiles') {
+                if (key.startsWith('mmd_files_') || key === 'uploadedFiles' || key.startsWith('excel_cache_')) {
                     localStorage.removeItem(key);
                     console.log('clearAllFiles cleared:', key);
                 }
@@ -1058,16 +2299,15 @@
             const dateLabel = new Date().toLocaleDateString('sv-SE');
             const filesList = uploadedFiles.map(file => `
                 <label class="delete-file-item">
-                    <input type="checkbox" class="delete-file-checkbox" value="${file.name}" checked>
                     <span>
                         <span class="file-name">${file.name}</span>
                         <span class="file-meta">${new Date(file.uploadedAt).toLocaleDateString('sv-SE')} • ${Math.round(file.size/1024)} KB</span>
                     </span>
+                    <input type="checkbox" class="delete-file-checkbox" value="${file.name}" checked>
                 </label>
             `).join('');
             
             const title = uploadedFiles.length === 1 ? uploadedFiles[0].name : `${uploadedFiles.length} filer valda`;
-            const dateLabel = new Date().toLocaleDateString('sv-SE');
             
             const overlayHTML = `
                 <div class="delete-overlay" id="uploadsDeleteOverlay">
@@ -1110,6 +2350,8 @@
             document.body.insertAdjacentHTML('beforeend', overlayHTML);
             const overlay = document.getElementById('uploadsDeleteOverlay');
             requestAnimationFrame(() => overlay.classList.add('active'));
+            attachDeleteFileCheckboxHandlers();
+            updateDeleteSelectAllButton();
             
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
@@ -1118,6 +2360,37 @@
             });
             
             document.addEventListener('keydown', handleUploadsDeleteEscapeKey);
+        }
+
+        function attachDeleteFileCheckboxHandlers() {
+            const checkboxes = document.querySelectorAll('.delete-file-checkbox');
+            checkboxes.forEach(cb => cb.addEventListener('change', updateDeleteSelectAllButton));
+        }
+
+        function updateDeleteSelectAllButton() {
+            const checkboxes = document.querySelectorAll('.delete-file-checkbox');
+            const selectAllBtn = document.querySelector('.select-all-btn');
+            if (!selectAllBtn) return;
+            const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
+            selectAllBtn.textContent = allChecked ? 'Avmarkera alla' : 'Markera alla';
+        }
+
+        function toggleSelectAllFiles() {
+            const checkboxes = document.querySelectorAll('.delete-file-checkbox');
+            const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
+            checkboxes.forEach(cb => cb.checked = !allChecked);
+            updateDeleteSelectAllButton();
+        }
+
+        function getSelectedFilesForDeletion() {
+            const checkboxes = document.querySelectorAll('.delete-file-checkbox');
+            if (!checkboxes.length) {
+                return null;
+            }
+            const selected = Array.from(checkboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+            return selected.length === checkboxes.length ? null : selected;
         }
 
         function closeUploadsDeleteOverlay() {
@@ -1142,7 +2415,8 @@
             confirmBtn.innerHTML = 'Raderar...';
             confirmBtn.disabled = true;
             
-            await performDeleteUploads();
+            const selected = getSelectedFilesForDeletion();
+            await performDeleteUploads(selected);
             
             confirmBtn.innerHTML = originalText;
             confirmBtn.disabled = false;
@@ -1211,6 +2485,7 @@
                 if (key.startsWith('mmd_files_') || 
                     key.startsWith('transfer_') || 
                     key.startsWith('patient_transfer_') ||
+                    key.startsWith('excel_cache_') ||
                     key === 'currentTransferId' ||
                     key === 'currentPatientName' ||
                     key === 'uploadedFiles' ||
@@ -1236,6 +2511,326 @@
             
             // Redirect to login
             window.location.href = 'login.html';
+        }
+
+        function initializeJournalCard() {
+            // Find the Journalanteckningar card
+            const journalCards = document.querySelectorAll('.organ-item');
+            journalCards.forEach(card => {
+                const title = card.querySelector('.organ-name');
+                if (title && title.textContent === 'Journalanteckningar') {
+                    // Make the card clickable
+                    const link = card.closest('.organ-item-link');
+                    if (link) {
+                        link.href = 'javascript:void(0)';
+                        link.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            toggleJournalCard(card);
+                        });
+                    }
+                }
+            });
+        }
+
+        function toggleJournalCard(card) {
+            // Check if journal content container exists
+            let journalContainer = card.closest('.organ-item-link')?.querySelector('.journal-expandable-content');
+            
+            if (!journalContainer) {
+                // Create the container directly inside the card's parent link
+                const link = card.closest('.organ-item-link');
+                if (!link) return;
+                
+                journalContainer = document.createElement('div');
+                journalContainer.className = 'journal-expandable-content';
+                journalContainer.style.cssText = `
+                    display: none;
+                    margin-top: 16px;
+                    padding: 20px;
+                    background: #f8fafc;
+                    border-radius: 12px;
+                    border: 1px solid #e5e7eb;
+                    width: 100%;
+                `;
+                
+                // Insert after the card
+                link.appendChild(journalContainer);
+            }
+            
+            const isExpanded = journalContainer.style.display !== 'none';
+            const chevron = card.querySelector('.chevron');
+            
+            if (isExpanded) {
+                journalContainer.style.display = 'none';
+                if (chevron) chevron.style.transform = 'rotate(0deg)';
+                card.classList.remove('expanded');
+            } else {
+                journalContainer.style.display = 'block';
+                if (chevron) chevron.style.transform = 'rotate(90deg)';
+                card.classList.add('expanded');
+                
+                // Check if we need to reload (new PDFs added) or if already loaded
+                const pdfFiles = uploadedFiles.filter(file =>
+                    file.mimetype === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+                );
+                const currentPdfCount = journalContainer.querySelectorAll('.pdf-journal-entry').length;
+                
+                // Only reload if container is empty or PDF count changed
+                if (journalContainer.children.length === 0 || currentPdfCount !== pdfFiles.length) {
+                    journalContainer.dataset.loaded = 'false';
+                    journalContainer.innerHTML = '';
+                    loadJournalEntriesIntoContainer(journalContainer);
+                }
+            }
+        }
+
+        async function loadJournalEntriesIntoContainer(container) {
+            // Check if already loaded to prevent duplicates
+            if (container.dataset.loaded === 'true') {
+                return;
+            }
+            
+            container.innerHTML = '<p style="color: #666;">Laddar journalanteckningar...</p>';
+            
+            const pdfFiles = uploadedFiles.filter(file =>
+                file.mimetype === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+            );
+            
+            if (pdfFiles.length === 0) {
+                container.innerHTML = '<p style="color: #666;">Inga journalanteckningar tillgängliga.</p>';
+                container.dataset.loaded = 'true';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            // Load each PDF and create entry
+            const loadPromises = pdfFiles.map(async (pdfFile) => {
+                try {
+                    const response = await fetch(`/api/pdf-content?transferId=${currentTransferId}&filename=${encodeURIComponent(pdfFile.name)}`);
+                    if (response.ok) {
+                        const parsedData = await response.json();
+                        return createPDFJournalCard(pdfFile, parsedData);
+                    } else {
+                        return createBasicPDFCard(pdfFile);
+                    }
+                } catch (error) {
+                    console.error(`Failed to load PDF content for ${pdfFile.name}:`, error);
+                    return createBasicPDFCard(pdfFile);
+                }
+            });
+            
+            const cards = await Promise.all(loadPromises);
+            cards.forEach(card => container.appendChild(card));
+            
+            // Mark as loaded
+            container.dataset.loaded = 'true';
+        }
+
+        function initializeMetricsTabs() {
+            const tabGroups = document.querySelectorAll('.metrics-tabs');
+            if (!tabGroups.length) return;
+
+            tabGroups.forEach(group => {
+                const tabs = group.querySelectorAll('.metrics-tab');
+                const panels = group.querySelectorAll('.tab-panel');
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const target = tab.getAttribute('data-tab');
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tab.classList.add('active');
+                        panels.forEach(panel => {
+                            const match = panel.getAttribute('data-tab-panel') === target;
+                            panel.classList.toggle('active', match);
+                        });
+                    });
+                });
+            });
+        }
+
+        function getImportOverlayElements() {
+            return {
+                overlay: document.getElementById('importOverlay'),
+                progressBar: document.getElementById('importProgressBar'),
+                progressText: document.getElementById('importProgressText'),
+                titleEl: document.getElementById('importOverlayTitle'),
+                copyEl: document.getElementById('importOverlayCopy'),
+                trackEl: document.getElementById('importProgressTrack'),
+                iconEl: document.getElementById('importOverlayIcon')
+            };
+        }
+
+        function showImportOverlay(totalSteps = 0, options = {}) {
+            const mode = options.mode || 'import';
+            const { overlay, progressBar, progressText, titleEl, copyEl, trackEl, iconEl } = getImportOverlayElements();
+            if (!overlay) return;
+
+            if (mode === 'waiting' && !options.force) {
+                // Always show overlay if there are no files (regardless of flag)
+                if (uploadedFiles.length === 0) {
+                    // Show overlay - don't mark as seen yet, wait until files arrive
+                } else if (hasSeenWaitingOverlay()) {
+                    // Skip if we've seen it AND there are already files
+                    return;
+                } else {
+                    // Files exist but we haven't seen overlay - mark it now
+                    markWaitingOverlaySeen();
+                }
+            }
+
+            if (importOverlayState.timerId) {
+                clearInterval(importOverlayState.timerId);
+                importOverlayState.timerId = null;
+            }
+
+            importOverlayState.visible = true;
+            importOverlayState.totalSteps = totalSteps;
+            importOverlayState.mode = mode;
+
+            overlay.classList.add('visible');
+            overlay.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('import-locked');
+
+            if (mode === 'waiting') {
+                if (titleEl) titleEl.textContent = 'Väntar på uppladdning av data från patient';
+                if (copyEl) copyEl.textContent = 'Be patienten att slutföra uppladdningen. Plattformen låses tills data är mottagen.';
+                if (progressText) progressText.textContent = 'Ingen data mottagen ännu';
+                if (trackEl) trackEl.style.display = 'none';
+                if (progressBar) progressBar.style.width = '0%';
+                if (iconEl) iconEl.textContent = '⏳';
+                return;
+            }
+
+            if (titleEl) titleEl.textContent = 'Importerar patientdata';
+            if (copyEl) copyEl.textContent = 'Detta tar vanligtvis mindre än 30 sekunder.';
+            if (trackEl) trackEl.style.display = 'block';
+            if (progressBar) {
+                progressBar.style.width = '6%';
+            }
+            if (progressText) {
+                progressText.textContent = 'Förbereder import...';
+            }
+            if (iconEl) iconEl.textContent = '⬆︎';
+
+            importOverlayState.timerId = setInterval(() => {
+                if (!importOverlayState.visible || !progressBar || importOverlayState.mode !== 'import') return;
+                const currentWidth = parseFloat(progressBar.style.width) || 0;
+                if (currentWidth < 90) {
+                    const increment = Math.random() * 5 + 1;
+                    progressBar.style.width = `${Math.min(currentWidth + increment, 90)}%`;
+                }
+            }, 1000);
+        }
+
+        function updateImportOverlayProgress(completed, total) {
+            if (!importOverlayState.visible || importOverlayState.mode !== 'import') return;
+            const { progressBar, progressText } = getImportOverlayElements();
+            if (progressBar) {
+                const pct = Math.max((completed / total) * 100, 10);
+                progressBar.style.width = `${Math.min(pct, 96)}%`;
+            }
+            if (progressText) {
+                progressText.textContent = `Importerar patientdata (${completed}/${total})`;
+            }
+        }
+
+        function showPDFPreview(transferId, filename, displayName) {
+            // Create overlay for PDF preview
+            const overlay = document.createElement('div');
+            overlay.className = 'pdf-preview-overlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                z-index: 10001;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            `;
+            
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: white;
+                border-radius: 12px;
+                width: 100%;
+                max-width: 90vw;
+                max-height: 90vh;
+                display: flex;
+                flex-direction: column;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            `;
+            
+            const header = document.createElement('div');
+            header.style.cssText = `
+                padding: 16px 20px;
+                border-bottom: 1px solid #e5e7eb;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            `;
+            header.innerHTML = `
+                <h3 style="margin: 0; font-size: 18px; font-weight: 600;">${displayName}</h3>
+                <button onclick="this.closest('.pdf-preview-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+            `;
+            
+            const iframe = document.createElement('iframe');
+            // Use the PDF file endpoint from transfer server
+            iframe.src = `/pdf-file/${transferId}/${filename}`;
+            iframe.style.cssText = `
+                width: 100%;
+                height: calc(90vh - 60px);
+                border: none;
+                border-radius: 0 0 12px 12px;
+            `;
+            
+            modal.appendChild(header);
+            modal.appendChild(iframe);
+            overlay.appendChild(modal);
+            
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.remove();
+                }
+            });
+            
+            document.body.appendChild(overlay);
+        }
+
+        function finishImportOverlay(options = {}) {
+            if (!importOverlayState.visible) return;
+            const immediate = options.immediate || false;
+            const { overlay, progressBar, progressText } = getImportOverlayElements();
+            if (importOverlayState.timerId) {
+                clearInterval(importOverlayState.timerId);
+                importOverlayState.timerId = null;
+            }
+
+            const hideOverlay = () => {
+                if (overlay) {
+                    overlay.classList.remove('visible');
+                    overlay.setAttribute('aria-hidden', 'true');
+                }
+                document.body.classList.remove('import-locked');
+                importOverlayState.visible = false;
+                importOverlayState.mode = null;
+            };
+
+            if (importOverlayState.mode === 'waiting' || immediate) {
+                hideOverlay();
+                return;
+            }
+
+            if (progressBar) {
+                progressBar.style.width = '100%';
+            }
+            if (progressText) {
+                progressText.textContent = 'Import klar';
+            }
+            setTimeout(hideOverlay, 600);
         }
 
     </script>
