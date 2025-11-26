@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { put } from '@vercel/blob';
 import { loadTransferFromBlob, saveTransferToBlob, createEmptyTransfer } from './blobStore.js';
+import { getSessionCodeForTransfer } from './sessionStore.js';
 
 // Global storage for transfers (in-memory for local development)
 if (!global.__mmd_transfers) {
@@ -68,6 +69,13 @@ export default async function handler(req, res) {
         transfer = createEmptyTransfer();
       }
 
+      if (!transfer.sessionCode) {
+        const resolvedCode = await getSessionCodeForTransfer(transferId);
+        if (resolvedCode) {
+          transfer.sessionCode = resolvedCode;
+        }
+      }
+
       // Store the actual file content in Blob storage
       const fileContent = fs.readFileSync(file.filepath);
       const fileBlobKey = `files/${transferId}/${file.originalFilename}`;
@@ -113,14 +121,19 @@ export default async function handler(req, res) {
       console.log('Updated transfer object:', transfer);
 
       // notify desktop via session stage
-      try {
-        await fetch(`${process.env.BASE_URL || ''}/api/session-code/stage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code: transfer.sessionCode, stage: 'uploaded' })
-        });
-      } catch (notifyError) {
-        console.warn('Failed to notify session about uploaded stage:', notifyError?.message);
+      const sessionCode = transfer.sessionCode || await getSessionCodeForTransfer(transferId);
+      if (sessionCode) {
+        try {
+          await fetch(`${process.env.BASE_URL || ''}/api/session-code/stage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: sessionCode, stage: 'uploaded' })
+          });
+        } catch (notifyError) {
+          console.warn('Failed to notify session about uploaded stage:', notifyError?.message);
+        }
+      } else {
+        console.warn('Upload finished but no session code found for transfer:', transferId);
       }
 
       console.log('Upload completed successfully, sending 204 response');

@@ -1129,19 +1129,26 @@
             const existing = document.querySelector('.upload-notification');
             if (existing) existing.remove();
 
-            const indicatorColor = type === 'success' ? '#0F172A' : '#94A3B8';
+            const indicatorPalette = {
+                success: '#10B981',
+                error: '#F43F5E',
+                warning: '#FBBF24',
+                info: '#60A5FA',
+                waiting: '#FBBF24',
+            };
+            const indicatorColor = indicatorPalette[type] || indicatorPalette.waiting;
             const notification = document.createElement('div');
             notification.className = 'upload-notification';
             notification.style.cssText = `
                 position: fixed;
                 top: 24px;
                 right: 24px;
-                background: #FFFFFF;
-                color: #0F172A;
+                background: #0F172A;
+                color: #FFFFFF;
                 padding: 16px 24px;
                 border-radius: 14px;
-                border: 1px solid #0F172A;
-                box-shadow: 0 15px 35px rgba(15,23,42,0.12);
+                border: 1px solid rgba(148,163,184,0.35);
+                box-shadow: 0 20px 40px rgba(15,23,42,0.45);
                 font-size: 14px;
                 z-index: 9999;
                 white-space: nowrap;

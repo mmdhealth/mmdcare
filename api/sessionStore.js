@@ -114,6 +114,12 @@ export async function registerSession({ transferId, patientAlias = 'Patient', do
     doctorVerified: false,
   };
   await persistSession(session);
+  await updateTransferMeta(transferId, transfer => ({
+    ...transfer,
+    sessionCode: code,
+    patientAlias,
+    doctorName,
+  }));
   return session;
 }
 
@@ -143,6 +149,12 @@ async function removeSessionCode(code) {
   if (session) {
     global.__mmd_sessionCodes.delete(code);
     global.__mmd_sessionTransfers.delete(session.transferId);
+    await updateTransferMeta(session.transferId, transfer => {
+      if (!transfer) return transfer;
+      const next = { ...transfer };
+      delete next.sessionCode;
+      return next;
+    });
   }
   await deleteSessionFromBlob(code);
 }
@@ -153,6 +165,32 @@ export async function removeSessionForTransfer(transferId) {
   if (code) {
     await removeSessionCode(code);
   }
+}
+
+export async function getSessionCodeForTransfer(transferId) {
+  ensureMaps();
+  if (!transferId) return null;
+  let code = global.__mmd_sessionTransfers.get(transferId);
+  if (!code) {
+    for (const [storedCode, session] of global.__mmd_sessionCodes.entries()) {
+      if (session?.transferId === transferId) {
+        code = storedCode;
+        break;
+      }
+    }
+  }
+  if (!code) {
+    const transfer = await loadTransferFromBlob(transferId);
+    if (transfer?.sessionCode) {
+      const normalized = normalizeSessionCode(transfer.sessionCode);
+      code = normalized || transfer.sessionCode;
+    }
+  }
+  if (code) {
+    global.__mmd_sessionTransfers.set(transferId, code);
+    return code;
+  }
+  return null;
 }
 
 async function updateSession(code, updater) {

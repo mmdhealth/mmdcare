@@ -131,6 +131,9 @@ export default async function handler(req, res) {
     console.log('Created new transfer:', transfer);
     
     const session = await registerSession({ transferId, patientAlias, doctorName });
+    transfer.sessionCode = session.code;
+    await saveTransferToBlob(transferId, transfer);
+    global.__mmd_transfers.set(transferId, transfer);
     
     res.status(201).json({
       transferId,

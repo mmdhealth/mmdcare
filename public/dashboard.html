@@ -2118,16 +2118,17 @@
         function showFileNotification(file) {
             // Create a temporary notification
             const notification = document.createElement('div');
+            const indicatorColor = '#10B981';
             notification.style.cssText = `
                 position: fixed;
                 top: 24px;
                 right: 24px;
-                background: #FFFFFF;
-                color: #0F172A;
+                background: #0F172A;
+                color: #FFFFFF;
                 padding: 16px 24px;
                 border-radius: 14px;
-                border: 1px solid #0F172A;
-                box-shadow: 0 15px 35px rgba(15,23,42,0.12);
+                border: 1px solid rgba(148,163,184,0.35);
+                box-shadow: 0 20px 40px rgba(15,23,42,0.45);
                 z-index: 10000;
                 font-size: 14px;
                 max-width: 500px;
@@ -2141,10 +2142,10 @@
             } else {
                 notification.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 12px; height: 12px; background: #0F172A; border-radius: 50%; flex-shrink: 0;"></div>
+                        <div style="width: 12px; height: 12px; background: ${indicatorColor}; border-radius: 50%; flex-shrink: 0;"></div>
                         <div>
                             <div style="font-weight: 600;">Ny fil mottagen</div>
-                            <div style="font-size: 12px; color: #475569;">${file.name}</div>
+                            <div style="font-size: 12px; color: rgba(226,232,240,0.9);">${file.name}</div>
                         </div>
                     </div>
                 `;
