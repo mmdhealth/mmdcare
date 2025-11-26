@@ -1,5 +1,5 @@
 // Local API endpoint for retrieving uploaded files
-import { loadTransferFromBlob, saveTransferToBlob, createEmptyTransfer } from './blobStore.js';
+import { loadTransferFromBlob } from './blobStore.js';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -10,12 +10,6 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
-  }
-
-  // Initialize global storage if it doesn't exist
-  if (!global.__mmd_transfers) {
-    global.__mmd_transfers = new Map();
-    console.log('Initialized global.__mmd_transfers in files.js');
   }
 
   if (req.method === 'GET') {
@@ -29,20 +23,18 @@ export default async function handler(req, res) {
     }
 
     // Get transfer from Blob storage
-    let transfer = await loadTransferFromBlob(transferId);
+    const transfer = await loadTransferFromBlob(transferId);
     console.log('Found transfer:', transfer);
     
     if (!transfer) {
-      console.log('Transfer not found for ID (Blob):', transferId, '- creating new transfer record');
-      transfer = createEmptyTransfer();
-      await saveTransferToBlob(transferId, transfer);
-      console.log('Created new transfer record in Blob for ID:', transferId);
+      console.warn('Transfer not found for ID (Blob):', transferId);
+      return res.status(404).json({ error: 'Transfer not found' });
     }
 
     const response = {
       transferId,
       status: transfer.status,
-      files: transfer.files || []
+      files: Array.isArray(transfer.files) ? transfer.files : []
     };
     
     console.log('Returning files response:', response);
