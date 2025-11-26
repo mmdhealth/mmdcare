@@ -476,7 +476,9 @@
             console.log('Checking for transfer ID from redirect:', savedTransferId);
             
             if (savedTransferId) {
-                // Verify the transfer exists on the server and has files
+                // Verify the transfer on the server.
+                // IMPORTANT: A 404 or empty response here does NOT mean we should drop the transferId.
+                // The mobile upload might not have happened yet – we still want to keep polling for files.
                 try {
                     const verifyResponse = await fetch(`/api/files?transferId=${savedTransferId}`, {
                         cache: 'no-store',
@@ -491,26 +493,39 @@
                         console.log('Transfer verification response:', verifyData);
                         console.log('Files in transfer:', verifyData.files?.length || 0);
                         
-                        // Always keep the transfer so we can poll for future uploads
+                        // Keep the transferId and load any existing files (if any)
                         currentTransferId = savedTransferId;
                         console.log('✅ Transfer verified, monitoring uploads for ID:', currentTransferId);
                         
                         await loadUploadedFiles();
                         startFileEventStream();
-                    } else {
-                        // Transfer doesn't exist - show empty
-                        console.log('Transfer not found on server - showing empty');
-                        localStorage.removeItem('currentTransferId');
-                        currentTransferId = null;
+                    } else if (verifyResponse.status === 404) {
+                        // Transfer metadata not found yet in Blob – keep ID and start pure waiting mode
+                        console.log('Transfer not yet present in Blob (404). Keeping transferId and waiting for first upload.');
+                        currentTransferId = savedTransferId;
                         uploadedFiles = [];
                         updateFileDisplay();
+                        // Ensure waiting overlay is visible while we wait for the first file
+                        showImportOverlay(0, { mode: 'waiting', force: true });
+                        startFileEventStream();
+                    } else {
+                        // Other error – log and fall back to empty state but keep ID if possible
+                        const errorText = await verifyResponse.text();
+                        console.error('Error verifying transfer:', verifyResponse.status, errorText);
+                        currentTransferId = savedTransferId;
+                        uploadedFiles = [];
+                        updateFileDisplay();
+                        showImportOverlay(0, { mode: 'waiting', force: true });
+                        startFileEventStream();
                     }
                 } catch (error) {
                     console.error('Error verifying transfer:', error);
-                    localStorage.removeItem('currentTransferId');
-                    currentTransferId = null;
+                    // Network / transient error – keep transferId and keep waiting
+                    currentTransferId = savedTransferId;
                     uploadedFiles = [];
                     updateFileDisplay();
+                    showImportOverlay(0, { mode: 'waiting', force: true });
+                    startFileEventStream();
                 }
             } else {
                 // No transferId - empty state
