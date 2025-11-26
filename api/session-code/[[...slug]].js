@@ -11,12 +11,11 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Get the slug (sub-route) from the request
   const slug = req.query.slug || [];
-  const action = Array.isArray(slug) ? slug[0] : slug;
+  const slugArray = Array.isArray(slug) ? slug : [slug];
+  const action = slugArray[0];
 
-  // GET /api/session-code?code=... (no slug)
-  if (req.method === 'GET' && !action) {
+  if (req.method === 'GET' && (!action || action.length === 0)) {
     const { code } = req.query || {};
     if (!code) {
       res.status(400).json({ error: 'code query parameter required' });
@@ -37,7 +36,6 @@ export default async function handler(req, res) {
     return;
   }
 
-  // POST /api/session-code/stage
   if (req.method === 'POST' && action === 'stage') {
     try {
       const { code, stage } = req.body || {};
@@ -58,7 +56,6 @@ export default async function handler(req, res) {
     return;
   }
 
-  // POST /api/session-code/doctor
   if (req.method === 'POST' && action === 'doctor') {
     try {
       const { code, verified } = req.body || {};
