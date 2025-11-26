@@ -471,16 +471,42 @@
                 }
             }
             
-            // STEP 4: Get transferId from redirect and load ONLY new files
+            // STEP 4: Resolve transferId from session code (same way uploads do)
+            // This ensures we always use the SAME transferId that the mobile upload is using
+            const savedSessionCode = localStorage.getItem('currentSessionCode');
             const savedTransferId = localStorage.getItem('currentTransferId');
-            console.log('Checking for transfer ID from redirect:', savedTransferId);
             
-            if (savedTransferId) {
+            let resolvedTransferId = savedTransferId;
+            
+            // If we have a session code, resolve the current transferId from it
+            // This ensures we match what the mobile upload is using
+            if (savedSessionCode) {
+                try {
+                    const sessionResponse = await fetch(`/api/session-code?code=${encodeURIComponent(savedSessionCode)}`, {
+                        cache: 'no-store'
+                    });
+                    if (sessionResponse.ok) {
+                        const sessionData = await sessionResponse.json();
+                        if (sessionData.transferId) {
+                            resolvedTransferId = sessionData.transferId;
+                            console.log('✅ Resolved transferId from session code:', resolvedTransferId);
+                            // Update localStorage with the resolved ID
+                            localStorage.setItem('currentTransferId', resolvedTransferId);
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Failed to resolve transferId from session code, using saved:', error);
+                }
+            }
+            
+            console.log('Checking for transfer ID:', resolvedTransferId);
+            
+            if (resolvedTransferId) {
                 // Verify the transfer on the server.
                 // IMPORTANT: A 404 or empty response here does NOT mean we should drop the transferId.
                 // The mobile upload might not have happened yet – we still want to keep polling for files.
                 try {
-                    const verifyResponse = await fetch(`/api/files?transferId=${savedTransferId}`, {
+                    const verifyResponse = await fetch(`/api/files?transferId=${resolvedTransferId}`, {
                         cache: 'no-store',
                         headers: {
                             'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -494,7 +520,7 @@
                         console.log('Files in transfer:', verifyData.files?.length || 0);
                         
                         // Keep the transferId and load any existing files (if any)
-                        currentTransferId = savedTransferId;
+                        currentTransferId = resolvedTransferId;
                         console.log('✅ Transfer verified, monitoring uploads for ID:', currentTransferId);
                         
                         await loadUploadedFiles();
@@ -502,7 +528,7 @@
                     } else if (verifyResponse.status === 404) {
                         // Transfer metadata not found yet in Blob – keep ID and start pure waiting mode
                         console.log('Transfer not yet present in Blob (404). Keeping transferId and waiting for first upload.');
-                        currentTransferId = savedTransferId;
+                        currentTransferId = resolvedTransferId;
                         uploadedFiles = [];
                         updateFileDisplay();
                         // Ensure waiting overlay is visible while we wait for the first file
@@ -512,7 +538,7 @@
                         // Other error – log and fall back to empty state but keep ID if possible
                         const errorText = await verifyResponse.text();
                         console.error('Error verifying transfer:', verifyResponse.status, errorText);
-                        currentTransferId = savedTransferId;
+                        currentTransferId = resolvedTransferId;
                         uploadedFiles = [];
                         updateFileDisplay();
                         showImportOverlay(0, { mode: 'waiting', force: true });
@@ -521,7 +547,7 @@
                 } catch (error) {
                     console.error('Error verifying transfer:', error);
                     // Network / transient error – keep transferId and keep waiting
-                    currentTransferId = savedTransferId;
+                    currentTransferId = resolvedTransferId;
                     uploadedFiles = [];
                     updateFileDisplay();
                     showImportOverlay(0, { mode: 'waiting', force: true });
