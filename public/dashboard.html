@@ -350,11 +350,16 @@
             glucose: 'chart-glucose',
             egfr: 'chart-egfr'
         };
-        const DASHBOARD_WAITING_OVERLAY_KEY = 'mmd_dashboard_waiting_overlay_seen';
+        const DASHBOARD_WAITING_OVERLAY_KEY = 'mmd_dashboard_waiting_overlay';
+
+        function getWaitingOverlayStorageKey() {
+            const activeTransfer = currentTransferId || localStorage.getItem('currentTransferId');
+            return activeTransfer ? `${DASHBOARD_WAITING_OVERLAY_KEY}_${activeTransfer}` : DASHBOARD_WAITING_OVERLAY_KEY;
+        }
 
         function hasSeenWaitingOverlay() {
             try {
-                return localStorage.getItem(DASHBOARD_WAITING_OVERLAY_KEY) === 'true';
+                return sessionStorage.getItem(getWaitingOverlayStorageKey()) === 'true';
             } catch (error) {
                 return false;
             }
@@ -362,9 +367,25 @@
 
         function markWaitingOverlaySeen() {
             try {
-                localStorage.setItem(DASHBOARD_WAITING_OVERLAY_KEY, 'true');
+                sessionStorage.setItem(getWaitingOverlayStorageKey(), 'true');
             } catch (error) {
                 // Ignore storage errors (e.g. Safari private mode)
+            }
+        }
+
+        function resetWaitingOverlaySeen(forceAll = false) {
+            try {
+                if (forceAll) {
+                    Object.keys(sessionStorage).forEach(key => {
+                        if (key.startsWith(DASHBOARD_WAITING_OVERLAY_KEY)) {
+                            sessionStorage.removeItem(key);
+                        }
+                    });
+                } else {
+                    sessionStorage.removeItem(getWaitingOverlayStorageKey());
+                }
+            } catch (error) {
+                // ignore
             }
         }
 
@@ -1278,7 +1299,7 @@
                 uploadedFiles = [];
                 updateFileDisplay();
                 // Clear overlay flag so it shows again when files are uploaded
-                localStorage.removeItem(DASHBOARD_WAITING_OVERLAY_KEY);
+                resetWaitingOverlaySeen(true);
                 finishImportOverlay({ immediate: true });
                 return;
             }
@@ -1357,7 +1378,7 @@
                         updateProvsvarStatus();
                         console.log('No files found for this transfer - clean state');
                         // Clear overlay flag so it shows again when files are uploaded
-                        localStorage.removeItem(DASHBOARD_WAITING_OVERLAY_KEY);
+                        resetWaitingOverlaySeen(true);
                         if (currentTransferId) {
                             showImportOverlay(0, { mode: 'waiting' });
                         } else {
@@ -2666,16 +2687,10 @@
             if (!overlay) return;
 
             if (mode === 'waiting' && !options.force) {
-                // Always show overlay if there are no files (regardless of flag)
-                if (uploadedFiles.length === 0) {
-                    // Show overlay - don't mark as seen yet, wait until files arrive
-                } else if (hasSeenWaitingOverlay()) {
-                    // Skip if we've seen it AND there are already files
+                if (hasSeenWaitingOverlay()) {
                     return;
-                } else {
-                    // Files exist but we haven't seen overlay - mark it now
-                    markWaitingOverlaySeen();
                 }
+                markWaitingOverlaySeen();
             }
 
             if (importOverlayState.timerId) {

@@ -2,7 +2,7 @@ import { put, head, del } from '@vercel/blob';
 import { loadTransferFromBlob, saveTransferToBlob, hasBlobAccess } from './blobStore.js';
 
 const SESSION_TTL_MS = 45 * 60 * 1000;
-const SESSION_STAGES = new Set(['waiting', 'initiated', 'bankid', 'approved', 'cancelled']);
+const SESSION_STAGES = new Set(['waiting', 'initiated', 'bankid', 'approved', 'uploading', 'uploaded', 'cancelled']);
 
 const buildSessionKey = (code) => `transfers/session_code_${code}.json`;
 

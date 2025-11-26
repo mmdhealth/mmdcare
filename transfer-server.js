@@ -98,7 +98,7 @@ const clients = new Map();   // transferId -> Set(res) for SSE
 const patientTransfers = new Map(); // patientId -> transferId
 const sessionCodes = new Map(); // code -> { transferId, patientAlias, doctorName, createdAt, patientVerified, doctorVerified, stage }
 const SESSION_CODE_TTL = 45 * 60 * 1000;
-const SESSION_STAGES = new Set(['waiting', 'initiated', 'bankid', 'approved', 'cancelled']);
+const SESSION_STAGES = new Set(['waiting', 'initiated', 'bankid', 'approved', 'uploading', 'uploaded', 'cancelled']);
 
 const normalizeSessionCode = (code) => {
   if (!code) return null;

@@ -100,6 +100,25 @@
                 </div>
             </div>
 
+            <div class="chart-grid" style="display:grid;gap:18px;margin-top:24px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));">
+                <div class="chart-card card-animate">
+                    <h3>Hjärtfrekvens</h3>
+                    <canvas id="heartRateChart"></canvas>
+                </div>
+                <div class="chart-card card-animate">
+                    <h3>Blodtryck</h3>
+                    <canvas id="bloodPressureChart"></canvas>
+                </div>
+                <div class="chart-card card-animate">
+                    <h3>EKG</h3>
+                    <canvas id="ecgChart"></canvas>
+                </div>
+                <div class="chart-card card-animate">
+                    <h3>HRV</h3>
+                    <canvas id="hrvChart"></canvas>
+                </div>
+            </div>
+
         </main>
     </div>
     <script src="script.js?v=20250105"></script>
@@ -702,7 +721,12 @@
         // Removed initializeWithMockData - no longer needed with dynamic cards
         
         function initializeHeartRateChart(labels, data) {
-        const heartRateCtx = document.getElementById('heartRateChart').getContext('2d');
+            const heartRateCanvas = document.getElementById('heartRateChart');
+            if (!heartRateCanvas || !heartRateCanvas.getContext) {
+                console.warn('Heart rate chart canvas saknas');
+                return;
+            }
+            const heartRateCtx = heartRateCanvas.getContext('2d');
             if (heartRateChart) heartRateChart.destroy();
             
             // If no data, show empty state
@@ -805,7 +829,12 @@
 
         // Blood Pressure Chart
         function initializeBloodPressureChart(data, hasData) {
-        const bloodPressureCtx = document.getElementById('bloodPressureChart').getContext('2d');
+            const bloodPressureCanvas = document.getElementById('bloodPressureChart');
+            if (!bloodPressureCanvas || !bloodPressureCanvas.getContext) {
+                console.warn('Blood pressure chart canvas saknas');
+                return;
+            }
+            const bloodPressureCtx = bloodPressureCanvas.getContext('2d');
             if (bloodPressureChart) bloodPressureChart.destroy();
             
             // If no data, show empty state
@@ -906,7 +935,12 @@
 
         // ECG Chart
         function initializeECGChart(data) {
-        const ecgCtx = document.getElementById('ecgChart').getContext('2d');
+            const ecgCanvas = document.getElementById('ecgChart');
+            if (!ecgCanvas || !ecgCanvas.getContext) {
+                console.warn('ECG chart canvas saknas');
+                return;
+            }
+            const ecgCtx = ecgCanvas.getContext('2d');
             if (ecgChart) ecgChart.destroy();
             
             // Always show empty state for ECG (no data in Excel)
@@ -948,7 +982,12 @@
 
         // HRV Chart
         function initializeHRVChart(data) {
-        const hrvCtx = document.getElementById('hrvChart').getContext('2d');
+            const hrvCanvas = document.getElementById('hrvChart');
+            if (!hrvCanvas || !hrvCanvas.getContext) {
+                console.warn('HRV chart canvas saknas');
+                return;
+            }
+            const hrvCtx = hrvCanvas.getContext('2d');
             if (hrvChart) hrvChart.destroy();
             
             // Always show empty state for HRV (no data in Excel)

@@ -746,8 +746,18 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code: state.sessionCode, stage })
                 });
+                applyMobileStageVisuals(stage);
             } catch (error) {
                 console.error('Failed to update session stage:', error);
+            }
+        }
+        
+        function applyMobileStageVisuals(stage) {
+            if (!stage) return;
+            if (stage === 'uploading') {
+                updateWaitStatus('Patienten laddar upp dokument…', 'info');
+            } else if (stage === 'uploaded') {
+                updateWaitStatus('Filer mottagna – bearbetar data…', 'success');
             }
         }
 
@@ -761,6 +771,7 @@
             if (!state.sessionCode) return;
             const session = await lookupSession(state.sessionCode);
             if (!session) return;
+            applyMobileStageVisuals(session.stage);
             if (session.doctorVerified && !state.doctorVerified) {
                 state.doctorVerified = true;
                 stopDoctorWatch();
@@ -960,6 +971,7 @@
             }
             selectors.uploadBtn.disabled = true;
             setStatus(`Laddar upp ${files.length} fil(er)...`, 'progress');
+            updateSessionStage('uploading');
             try {
                 for (const file of files) {
                     const formData = new FormData();
@@ -987,6 +999,7 @@
                 selectors.selectedFilesContainer.innerHTML = '';
                 selectors.fileSelectionStatus.textContent = 'Ingen fil vald';
                 updateUploadedFilesDisplay();
+                updateSessionStage('uploaded');
                 setStatus('Uppladdningen slutförd!', 'success');
             } catch (error) {
                 console.error(error);

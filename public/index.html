@@ -491,6 +491,31 @@
 
     <script>
         const SESSION_TTL_MINUTES = 45;
+        const stageNoticeStorageKey = 'mmd_stage_notices';
+        let seenStageNotices = new Set();
+        try {
+            const storedStages = JSON.parse(sessionStorage.getItem(stageNoticeStorageKey) || '[]');
+            if (Array.isArray(storedStages)) {
+                seenStageNotices = new Set(storedStages);
+            }
+        } catch (error) {
+            // ignore storage parsing errors
+        }
+
+        function shouldShowStageNotice(stage) {
+            return stage && !seenStageNotices.has(stage);
+        }
+
+        function markStageNotice(stage) {
+            if (!stage) return;
+            seenStageNotices.add(stage);
+            try {
+                sessionStorage.setItem(stageNoticeStorageKey, JSON.stringify(Array.from(seenStageNotices)));
+            } catch (error) {
+                // ignore quota issues
+            }
+        }
+
         const state = {
             transferId: null,
             sessionCode: null,
@@ -650,6 +675,10 @@
                 step1Text = 'Patienten har godkänt villkoren och legitimerar sig.';
             } else if (stage === 'approved') {
                 step1Text = 'Patienten är klar – håll SITHS-kortet redo.';
+            } else if (stage === 'uploading') {
+                step1Text = 'Patienten laddar upp dokument just nu.';
+            } else if (stage === 'uploaded') {
+                step1Text = 'Filer mottagna – bearbetar data.';
             }
             if (step1Status) {
                 step1Status.textContent = step1Text;
@@ -689,6 +718,12 @@
                 state.uploadDetected = false;
                 state.redirectScheduled = false;
                 lastStageNotified = null;
+                seenStageNotices.clear();
+                try {
+                    sessionStorage.removeItem(stageNoticeStorageKey);
+                } catch (error) {
+                    // ignore
+                }
 
                 localStorage.setItem('currentTransferId', transferId);
                 localStorage.setItem('currentPatientName', state.patientAlias);
@@ -888,6 +923,10 @@
                     return state.doctorVerified
                         ? 'Patienten har identifierat sig – öppnar översikten.'
                         : 'Patienten har identifierat sig – din tur att legitimera dig.';
+                case 'uploading':
+                    return 'Patienten laddar upp dokument – håll fönstret öppet.';
+                case 'uploaded':
+                    return 'Filer mottagna – data visas strax.';
                 default:
                     return 'Väntar på patient.';
             }
@@ -895,18 +934,24 @@
 
         function announceStage(stage) {
             if (!stage || lastStageNotified === stage) return;
+            if (!shouldShowStageNotice(stage)) return;
+            markStageNotice(stage);
             lastStageNotified = stage;
             const messages = {
                 waiting: 'Väntar på patientens godkännande.',
                 initiated: 'Session påbörjad av patient.',
                 bankid: 'Patienten identifierar sig med BankID.',
-                approved: 'Patienten har identifierat sig.'
+                approved: 'Patienten har identifierat sig.',
+                uploading: 'Patienten laddar upp dokument…',
+                uploaded: 'Patienten har laddat upp dokument.'
             };
             const types = {
                 waiting: 'waiting',
                 initiated: 'waiting',
                 bankid: 'waiting',
-                approved: 'success'
+                approved: 'success',
+                uploading: 'waiting',
+                uploaded: 'success'
             };
             const text = messages[stage];
             if (text) {

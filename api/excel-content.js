@@ -48,51 +48,51 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Excel file not found in transfer' });
       }
 
-      // Get the actual Excel file from Blob storage
       const excelBlobKey = `files/${transferId}/${filename}`;
       console.log('=== RETRIEVING EXCEL FROM BLOB ===');
       console.log('Looking for Excel file at key:', excelBlobKey);
       console.log('Transfer ID:', transferId);
       console.log('Filename:', filename);
       
-      let excelBlob;
-      try {
-        console.log('Trying to get Excel blob using head()...');
-        const headResult = await head(excelBlobKey);
-        console.log('Head result:', headResult);
-        
-        if (headResult && headResult.url) {
-          console.log('Got blob URL from head():', headResult.url);
-          excelBlob = {
-            url: headResult.url,
-            size: headResult.size
-          };
-        } else {
-          throw new Error('No URL returned from head()');
+      let downloadUrl = excelFile.url;
+      if (!downloadUrl) {
+        try {
+          console.log('Trying to get Excel blob using head()...');
+          const headResult = await head(excelBlobKey);
+          console.log('Head result:', headResult);
+          
+          if (headResult && headResult.url) {
+            console.log('Got blob URL from head():', headResult.url);
+            downloadUrl = headResult.url;
+          } else {
+            throw new Error('No URL returned from head()');
+          }
+        } catch (error) {
+          console.error('Error getting Excel blob:', error);
+          console.error('Error details:', error.message);
+          
+          const fileExists = transfer.files.some(f => f.name === filename);
+          console.log('File exists in transfer metadata:', fileExists);
+          
+          return res.status(404).json({ 
+            error: 'Excel file not found in storage', 
+            key: excelBlobKey, 
+            details: error.message,
+            fileExistsInMetadata: fileExists
+          });
         }
-      } catch (error) {
-        console.error('Error getting Excel blob:', error);
-        console.error('Error details:', error.message);
-        
-        const fileExists = transfer.files.some(f => f.name === filename);
-        console.log('File exists in transfer metadata:', fileExists);
-        
-        return res.status(404).json({ 
-          error: 'Excel file not found in storage', 
-          key: excelBlobKey, 
-          details: error.message,
-          fileExistsInMetadata: fileExists
-        });
+      } else {
+        console.log('Using cached blob URL from metadata for Excel file.');
       }
       
-      if (!excelBlob) {
-        console.log('Excel blob is null/undefined');
+      if (!downloadUrl) {
+        console.log('Excel download URL missing');
         return res.status(404).json({ error: 'Excel file not found in storage' });
       }
 
       // Download the Excel content
-      console.log('Downloading Excel content from URL:', excelBlob.url);
-      const excelResponse = await fetch(excelBlob.url);
+      console.log('Downloading Excel content from URL:', downloadUrl);
+      const excelResponse = await fetch(downloadUrl);
       
       if (!excelResponse.ok) {
         console.error('Failed to download Excel, status:', excelResponse.status);
