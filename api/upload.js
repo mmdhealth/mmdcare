@@ -112,6 +112,17 @@ export default async function handler(req, res) {
       console.log('Transfer now has', transfer.files.length, 'files');
       console.log('Updated transfer object:', transfer);
 
+      // notify desktop via session stage
+      try {
+        await fetch(`${process.env.BASE_URL || ''}/api/session-code/stage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: transfer.sessionCode, stage: 'uploaded' })
+        });
+      } catch (notifyError) {
+        console.warn('Failed to notify session about uploaded stage:', notifyError?.message);
+      }
+
       console.log('Upload completed successfully, sending 204 response');
       res.status(204).end();
     } catch (error) {

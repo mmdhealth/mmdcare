@@ -401,6 +401,8 @@ body {
 .logo {
     height: 40px;
     width: auto;
+    filter: invert(15%) sepia(21%) saturate(1151%) hue-motion(187deg) brightness(90%) contrast(95%);
+    opacity: 0.9;
 }
 
 .logo-text {
@@ -454,12 +456,13 @@ body {
 .nav-icon {
     width: 20px;
     height: 20px;
-    filter: none;
-    opacity: 0.75;
+    filter: invert(15%) sepia(21%) saturate(1151%) hue-rotate(187deg) brightness(90%) contrast(95%);
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
 }
 
+.nav-item:hover .nav-icon,
 .nav-item.active .nav-icon {
-    filter: none;
     opacity: 1;
 }
 

@@ -1318,7 +1318,8 @@
                     cache: 'no-store',
                     headers: {
                         'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache'
+                        'Pragma': 'no-cache',
+                        'X-Transfer-Id': currentTransferId || ''
                     }
                 });
                 console.log('API response status:', response.status);
@@ -1357,12 +1358,10 @@
                         
                         // Hide waiting overlay immediately since we have files
                         markWaitingOverlaySeen();
-                        if (importOverlayState.mode === 'waiting') {
-                            finishImportOverlay({ immediate: true });
-                        }
+                        finishImportOverlay({ immediate: true });
                         
                         // Show notification for mobile files
-                        showFileNotification({ size: 0 }); // Special notification for mobile files
+                        showFileNotification({ size: uploadedFiles[0]?.size || 0, name: uploadedFiles[0]?.name || 'Ny fil' });
                         
                         // Load imported journal notes if any PDF files exist
                         await loadImportedJournalNotes();
