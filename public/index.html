@@ -1129,19 +1129,19 @@
             const existing = document.querySelector('.upload-notification');
             if (existing) existing.remove();
 
-            const indicatorColor = type === 'success' ? '#10B981' : '#2563EB';
+            const indicatorColor = type === 'success' ? '#0F172A' : '#94A3B8';
             const notification = document.createElement('div');
             notification.className = 'upload-notification';
             notification.style.cssText = `
                 position: fixed;
                 top: 24px;
                 right: 24px;
-                background: #0f172a;
-                color: white;
+                background: #FFFFFF;
+                color: #0F172A;
                 padding: 16px 24px;
                 border-radius: 14px;
-                border: 1px solid rgba(148,163,184,0.25);
-                box-shadow: 0 20px 40px rgba(15,23,42,0.35);
+                border: 1px solid #0F172A;
+                box-shadow: 0 15px 35px rgba(15,23,42,0.12);
                 font-size: 14px;
                 z-index: 9999;
                 white-space: nowrap;

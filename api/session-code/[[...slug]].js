@@ -1,4 +1,4 @@
-import { getSessionByCode, updateSessionStage, updateDoctorVerification, SESSION_TTL_MS } from './sessionStore.js';
+import { getSessionByCode, updateSessionStage, updateDoctorVerification, SESSION_TTL_MS } from '../sessionStore.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -11,9 +11,11 @@ export default async function handler(req, res) {
     return;
   }
 
-  const action = req.query.slug || req.query.action || null;
+  const slug = req.query.slug || [];
+  const parts = Array.isArray(slug) ? slug : [slug];
+  const action = parts[0];
 
-  if (req.method === 'GET' && !action) {
+  if (req.method === 'GET' && (!action || action.length === 0)) {
     const { code } = req.query || {};
     if (!code) {
       res.status(400).json({ error: 'code query parameter required' });
