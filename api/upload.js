@@ -18,6 +18,18 @@ export const config = {
   },
 };
 
+function resolveInternalUrl(req, pathname) {
+  const base =
+    process.env.BASE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+  if (base) {
+    return new URL(pathname, base).toString();
+  }
+  const proto = req.headers['x-forwarded-proto'] || req.headers['x-forwarded-protocol'] || req.protocol || 'https';
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
+  return `${proto}://${host}${pathname}`;
+}
+
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -124,7 +136,8 @@ export default async function handler(req, res) {
       const sessionCode = transfer.sessionCode || await getSessionCodeForTransfer(transferId);
       if (sessionCode) {
         try {
-          await fetch(`${process.env.BASE_URL || ''}/api/session-code/stage`, {
+          const stageUrl = resolveInternalUrl(req, '/api/session-code/stage');
+          await fetch(stageUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code: sessionCode, stage: 'uploaded' })
