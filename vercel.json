@@ -1,6 +1,10 @@
 {
   "routes": [
     {
+      "src": "/api/session-code/(stage|doctor)",
+      "dest": "/api/session-code?slug=$1"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     },
