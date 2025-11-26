@@ -148,6 +148,22 @@
             cursor: pointer;
             transition: background 0.2s ease;
         }
+        .button.button-primary.loading {
+            opacity: 0.85;
+            pointer-events: none;
+        }
+        .button-spinner {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.35);
+            border-top-color: #FFFFFF;
+            animation: buttonSpin 0.8s linear infinite;
+        }
+        @keyframes buttonSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
         .button-primary {
             background: #1D4ED8;
             color: #FFFFFF;
@@ -649,7 +665,7 @@
         }
 
         async function generateNewCode() {
-            disablePrimaryButtons(true);
+            setGenerateButtonLoading(true);
             try {
                 const patientAlias = state.patientAlias?.trim() || 'Patient';
                 const transferData = await createTransfer(patientAlias);
@@ -692,12 +708,26 @@
                 console.error(error);
                 updateCodeMeta('Ett fel uppstod när koden skulle genereras.');
             } finally {
-                disablePrimaryButtons(false);
+                setGenerateButtonLoading(false);
             }
         }
 
-        function disablePrimaryButtons(disabled) {
-            elements.generateCodeBtn.disabled = disabled;
+        function setGenerateButtonLoading(isLoading) {
+            const btn = elements.generateCodeBtn;
+            if (!btn) return;
+            if (isLoading) {
+                if (!btn.dataset.originalText) {
+                    btn.dataset.originalText = btn.textContent.trim();
+                }
+                btn.classList.add('loading');
+                btn.disabled = true;
+                btn.innerHTML = `<span class="button-spinner" aria-hidden="true"></span><span>Genererar...</span>`;
+            } else {
+                const originalText = btn.dataset.originalText || 'Generera ny kod';
+                btn.classList.remove('loading');
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
         }
 
         async function createTransfer(patientAlias) {

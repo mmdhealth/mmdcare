@@ -1,23 +1,23 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
     },
     {
-      "source": "/(.*)",
-      "destination": "/public/$1"
-    }
-  ],
-  "headers": [
+      "handle": "filesystem"
+    },
     {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
-      ]
+      "src": "/mobile-upload",
+      "dest": "/mobile-upload.html"
+    },
+    {
+      "src": "/mobile-upload.html",
+      "dest": "/mobile-upload.html"
+    },
+    {
+      "src": "/",
+      "dest": "/login.html"
     }
   ]
 }
