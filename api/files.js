@@ -32,21 +32,25 @@ export default async function handler(req, res) {
     }
 
     // Get transfer from Blob storage
+    console.log('📂 Loading transfer from Blob for ID:', transferId);
     const transfer = await loadTransferFromBlob(transferId);
-    console.log('Found transfer:', transfer);
     
     if (!transfer) {
-      console.warn('Transfer not found for ID (Blob):', transferId);
+      console.warn('❌ Transfer not found for ID (Blob):', transferId);
       return res.status(404).json({ error: 'Transfer not found' });
     }
 
+    const fileCount = Array.isArray(transfer.files) ? transfer.files.length : 0;
+    console.log('✅ Transfer loaded -', fileCount, 'files found');
+    console.log('Transfer files:', transfer.files?.map(f => f.name) || []);
+
     const response = {
       transferId,
-      status: transfer.status,
+      status: transfer.status || 'open',
       files: Array.isArray(transfer.files) ? transfer.files : []
     };
     
-    console.log('Returning files response:', response);
+    console.log('📤 Returning files response -', response.files.length, 'files');
     res.status(200).json(response);
   } else {
     res.status(405).json({ error: 'Method not allowed' });

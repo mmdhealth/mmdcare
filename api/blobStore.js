@@ -50,14 +50,24 @@ export async function saveTransferToBlob(transferId, transfer) {
     throw new Error('Blob storage not available - cannot persist transfer');
   }
   const key = buildKey(transferId);
-  console.log('💾 Saving transfer to Blob:', key);
-  await put(key, JSON.stringify(transfer, null, 2), {
+  console.log('💾 Saving transfer to Blob:', key, 'with', transfer.files?.length || 0, 'files');
+  
+  // Ensure files array exists
+  if (!Array.isArray(transfer.files)) {
+    transfer.files = [];
+  }
+  
+  const transferJson = JSON.stringify(transfer, null, 2);
+  console.log('Transfer JSON size:', transferJson.length, 'bytes');
+  
+  await put(key, transferJson, {
     contentType: 'application/json',
     access: 'public',
     cacheControlMaxAge: 0,
     allowOverwrite: true,
   });
-  console.log('✅ Transfer saved to Blob:', key);
+  
+  console.log('✅ Transfer saved to Blob:', key, '-', transfer.files.length, 'files');
 }
 
 export function createEmptyTransfer() {

@@ -132,7 +132,20 @@ export default async function handler(req, res) {
     
     const session = await registerSession({ transferId, patientAlias, doctorName });
     transfer.sessionCode = session.code;
+    
+    // CRITICAL: Save transfer with sessionCode immediately
+    console.log('💾 Saving transfer with sessionCode:', session.code);
     await saveTransferToBlob(transferId, transfer);
+    
+    // Verify it was saved
+    const verifyTransfer = await loadTransferFromBlob(transferId);
+    if (!verifyTransfer || verifyTransfer.sessionCode !== session.code) {
+      console.error('❌ Transfer verification failed - retrying...');
+      await saveTransferToBlob(transferId, transfer);
+    } else {
+      console.log('✅ Transfer saved and verified with sessionCode:', verifyTransfer.sessionCode);
+    }
+    
     global.__mmd_transfers.set(transferId, transfer);
     
     res.status(201).json({

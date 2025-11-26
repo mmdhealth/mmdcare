@@ -134,12 +134,33 @@ export default async function handler(req, res) {
       
       // Add file to transfer and persist
       transfer.files.push(meta);
+      
+      // CRITICAL: Save to Blob and verify it was saved
+      console.log('💾 Saving transfer with', transfer.files.length, 'files to Blob...');
       await saveTransferToBlob(transferId, transfer);
+      
+      // Verify the save by reading it back immediately
+      const verifyTransfer = await loadTransferFromBlob(transferId);
+      if (!verifyTransfer || !verifyTransfer.files || verifyTransfer.files.length !== transfer.files.length) {
+        console.error('❌ VERIFICATION FAILED - Transfer not saved correctly!');
+        console.error('Expected files:', transfer.files.length, 'Got:', verifyTransfer?.files?.length || 0);
+        // Retry once
+        console.log('🔄 Retrying save...');
+        await saveTransferToBlob(transferId, transfer);
+        const retryVerify = await loadTransferFromBlob(transferId);
+        if (!retryVerify || retryVerify.files.length !== transfer.files.length) {
+          throw new Error(`Failed to save transfer to Blob - verification failed after retry`);
+        }
+        console.log('✅ Retry successful - transfer verified');
+      } else {
+        console.log('✅ Transfer saved and verified -', verifyTransfer.files.length, 'files in Blob');
+      }
+      
       global.__mmd_transfers.set(transferId, transfer);
       
       console.log('File uploaded successfully:', meta);
       console.log('Transfer now has', transfer.files.length, 'files');
-      console.log('Updated transfer object:', transfer);
+      console.log('Updated transfer object:', JSON.stringify(transfer, null, 2));
 
       // Send response IMMEDIATELY after saving file (don't wait for stage notification)
       console.log('Upload completed successfully, sending JSON response');
