@@ -45,13 +45,19 @@ async function persistSession(session) {
   global.__mmd_sessionCodes.set(session.code, session);
   global.__mmd_sessionTransfers.set(session.transferId, session.code);
 
-  if (!hasBlobAccess()) return;
-  await put(buildSessionKey(session.code), JSON.stringify(session, null, 2), {
+  if (!hasBlobAccess()) {
+    console.error('❌ BLOB ACCESS DENIED - Cannot persist session. VERCEL env:', process.env.VERCEL);
+    throw new Error('Blob storage not available - cannot persist session');
+  }
+  const key = buildSessionKey(session.code);
+  console.log('💾 Saving session to Blob:', key);
+  await put(key, JSON.stringify(session, null, 2), {
     contentType: 'application/json',
     access: 'public',
     cacheControlMaxAge: 0,
     allowOverwrite: true,
   });
+  console.log('✅ Session saved to Blob:', key);
 }
 
 async function loadSessionFromBlob(code) {

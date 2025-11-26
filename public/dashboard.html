@@ -499,14 +499,17 @@
                 }
             }
             
-            console.log('Checking for transfer ID:', resolvedTransferId);
+            console.log('Checking for transfer ID:', resolvedTransferId, 'session code:', savedSessionCode);
             
-            if (resolvedTransferId) {
+            // Always prefer session code for queries (more reliable)
+            const queryParam = savedSessionCode ? `code=${encodeURIComponent(savedSessionCode)}` : (resolvedTransferId ? `transferId=${resolvedTransferId}` : null);
+            
+            if (queryParam) {
                 // Verify the transfer on the server.
                 // IMPORTANT: A 404 or empty response here does NOT mean we should drop the transferId.
                 // The mobile upload might not have happened yet – we still want to keep polling for files.
                 try {
-                    const verifyResponse = await fetch(`/api/files?transferId=${resolvedTransferId}`, {
+                    const verifyResponse = await fetch(`/api/files?${queryParam}`, {
                         cache: 'no-store',
                         headers: {
                             'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -519,8 +522,13 @@
                         console.log('Transfer verification response:', verifyData);
                         console.log('Files in transfer:', verifyData.files?.length || 0);
                         
-                        // Keep the transferId and load any existing files (if any)
-                        currentTransferId = resolvedTransferId;
+                        // Update currentTransferId from response (in case we used session code)
+                        if (verifyData.transferId) {
+                            currentTransferId = verifyData.transferId;
+                            localStorage.setItem('currentTransferId', currentTransferId);
+                        } else if (resolvedTransferId) {
+                            currentTransferId = resolvedTransferId;
+                        }
                         console.log('✅ Transfer verified, monitoring uploads for ID:', currentTransferId);
                         
                         await loadUploadedFiles();
@@ -528,7 +536,9 @@
                     } else if (verifyResponse.status === 404) {
                         // Transfer metadata not found yet in Blob – keep ID and start pure waiting mode
                         console.log('Transfer not yet present in Blob (404). Keeping transferId and waiting for first upload.');
-                        currentTransferId = resolvedTransferId;
+                        if (resolvedTransferId) {
+                            currentTransferId = resolvedTransferId;
+                        }
                         uploadedFiles = [];
                         updateFileDisplay();
                         // Ensure waiting overlay is visible while we wait for the first file
@@ -538,7 +548,9 @@
                         // Other error – log and fall back to empty state but keep ID if possible
                         const errorText = await verifyResponse.text();
                         console.error('Error verifying transfer:', verifyResponse.status, errorText);
-                        currentTransferId = resolvedTransferId;
+                        if (resolvedTransferId) {
+                            currentTransferId = resolvedTransferId;
+                        }
                         uploadedFiles = [];
                         updateFileDisplay();
                         showImportOverlay(0, { mode: 'waiting', force: true });
@@ -547,15 +559,17 @@
                 } catch (error) {
                     console.error('Error verifying transfer:', error);
                     // Network / transient error – keep transferId and keep waiting
-                    currentTransferId = resolvedTransferId;
+                    if (resolvedTransferId) {
+                        currentTransferId = resolvedTransferId;
+                    }
                     uploadedFiles = [];
                     updateFileDisplay();
                     showImportOverlay(0, { mode: 'waiting', force: true });
                     startFileEventStream();
                 }
             } else {
-                // No transferId - empty state
-                console.log('No transfer ID - showing empty state');
+                // No transferId or session code - empty state
+                console.log('No transfer ID or session code - showing empty state');
                 currentTransferId = null;
                 uploadedFiles = [];
                 updateFileDisplay();
@@ -1335,8 +1349,10 @@
         }
 
         async function loadUploadedFiles() {
-            if (!currentTransferId) {
-                console.log('No transfer ID available for loading files');
+            // Always use session code if available (more reliable than transferId)
+            const sessionCode = localStorage.getItem('currentSessionCode');
+            if (!sessionCode && !currentTransferId) {
+                console.log('No session code or transfer ID available for loading files');
                 uploadedFiles = [];
                 updateFileDisplay();
                 // Clear overlay flag so it shows again when files are uploaded
@@ -1345,13 +1361,15 @@
                 return;
             }
 
-            console.log('Loading files for transfer ID:', currentTransferId);
+            // Prefer session code over transferId for queries
+            const queryParam = sessionCode ? `code=${encodeURIComponent(sessionCode)}` : `transferId=${currentTransferId}`;
+            console.log('Loading files using:', sessionCode ? `code=${sessionCode}` : `transferId=${currentTransferId}`);
             
             try {
                 // Load files ONLY from API endpoint (in-memory server state)
                 // NEVER load from localStorage, blob storage, or any persistent storage
                 // The server will return empty array if transfer was cleared by logout
-                const url = `/api/files?transferId=${currentTransferId}`;
+                const url = `/api/files?${queryParam}`;
                 console.log('Fetching files from API:', url);
                 
                 const response = await fetch(url, {
@@ -1694,7 +1712,12 @@
         }
 
         function startFileEventStream() {
-            if (!currentTransferId) return;
+            // Check for session code OR transferId
+            const sessionCode = localStorage.getItem('currentSessionCode');
+            if (!sessionCode && !currentTransferId) {
+                console.log('No session code or transferId available for file event stream');
+                return;
+            }
 
             // Note: EventSource is not available for cross-origin requests in serverless
             // We'll rely on the polling mechanism from the login page instead
@@ -1722,7 +1745,10 @@
                 }
                 pollInFlight = true;
                 try {
-                    const response = await fetch(`/api/files?transferId=${currentTransferId}`, {
+                    // Always use session code if available (more reliable than transferId)
+                    const sessionCode = localStorage.getItem('currentSessionCode');
+                    const queryParam = sessionCode ? `code=${encodeURIComponent(sessionCode)}` : `transferId=${currentTransferId}`;
+                    const response = await fetch(`/api/files?${queryParam}`, {
                         cache: 'no-store',
                         headers: {
                             'Cache-Control': 'no-cache, no-store, must-revalidate'
