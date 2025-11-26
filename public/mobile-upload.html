@@ -965,8 +965,8 @@
                 setStatus('Välj minst en fil.', 'error');
                 return;
             }
-            if (!state.transferId) {
-                setStatus('Session saknas. Logga in igen.', 'error');
+            if (!state.sessionCode) {
+                setStatus('Session saknas. Ange koden igen.', 'error');
                 return;
             }
             selectors.uploadBtn.disabled = true;
@@ -976,7 +976,8 @@
                 for (const file of files) {
                     const formData = new FormData();
                     formData.append('file', file);
-                    const res = await fetch(`/api/upload?transferId=${state.transferId}`, {
+                    const query = new URLSearchParams({ code: state.sessionCode }).toString();
+                    const res = await fetch(`/api/upload?${query}`, {
                         method: 'POST',
                         body: formData,
                         cache: 'no-store'

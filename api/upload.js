@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { put } from '@vercel/blob';
 import { loadTransferFromBlob, saveTransferToBlob, createEmptyTransfer } from './blobStore.js';
-import { getSessionCodeForTransfer } from './sessionStore.js';
+import { getSessionCodeForTransfer, getSessionByCode } from './sessionStore.js';
 
 // Global storage for transfers (in-memory for local development)
 if (!global.__mmd_transfers) {
@@ -42,14 +42,23 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { transferId } = req.query;
+    let { transferId, code } = req.query;
     
     console.log('=== LOCAL UPLOAD POST REQUEST ===');
-    console.log('Transfer ID:', transferId);
+    console.log('Incoming transferId:', transferId, 'code:', code);
     
+    // Allow client to specify either transferId OR session code.
+    if (!transferId && code) {
+      const session = await getSessionByCode(code);
+      if (session?.transferId) {
+        transferId = session.transferId;
+        console.log('Resolved transferId from session code:', transferId);
+      }
+    }
+
     if (!transferId) {
-      console.log('No transfer ID provided');
-      return res.status(400).json({ error: 'No transfer ID provided' });
+      console.log('No transfer ID could be resolved from query');
+      return res.status(400).json({ error: 'No transfer ID provided or resolvable from code' });
     }
 
     try {
