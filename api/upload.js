@@ -141,23 +141,7 @@ export default async function handler(req, res) {
       console.log('Transfer now has', transfer.files.length, 'files');
       console.log('Updated transfer object:', transfer);
 
-      // notify desktop via session stage
-      const sessionCode = transfer.sessionCode || await getSessionCodeForTransfer(transferId);
-      if (sessionCode) {
-        try {
-          const stageUrl = resolveInternalUrl(req, '/api/session-code/stage');
-          await fetch(stageUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: sessionCode, stage: 'uploaded' })
-          });
-        } catch (notifyError) {
-          console.warn('Failed to notify session about uploaded stage:', notifyError?.message);
-        }
-      } else {
-        console.warn('Upload finished but no session code found for transfer:', transferId);
-      }
-
+      // Send response IMMEDIATELY after saving file (don't wait for stage notification)
       console.log('Upload completed successfully, sending JSON response');
       res.status(200).json({
         success: true,
@@ -165,6 +149,24 @@ export default async function handler(req, res) {
         fileCount: transfer.files.length,
         files: transfer.files
       });
+
+      // Notify desktop via session stage (fire-and-forget, don't block response)
+      // Do this AFTER sending response so it doesn't timeout the function
+      (async () => {
+        try {
+          const sessionCode = transfer.sessionCode || await getSessionCodeForTransfer(transferId);
+          if (sessionCode) {
+            const stageUrl = resolveInternalUrl(req, '/api/session-code/stage');
+            await fetch(stageUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code: sessionCode, stage: 'uploaded' })
+            });
+          }
+        } catch (notifyError) {
+          console.warn('Failed to notify session about uploaded stage:', notifyError?.message);
+        }
+      })();
     } catch (error) {
       console.error('Upload error:', error);
       console.error('Error stack:', error.stack);
