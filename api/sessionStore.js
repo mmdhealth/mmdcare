@@ -4,7 +4,7 @@ import { loadTransferFromBlob, saveTransferToBlob, hasBlobAccess } from './blobS
 const SESSION_TTL_MS = 45 * 60 * 1000;
 const SESSION_STAGES = new Set(['waiting', 'initiated', 'bankid', 'approved', 'cancelled']);
 
-const buildSessionKey = (code) => `session_codes/${code}.json`;
+const buildSessionKey = (code) => `transfers/session_code_${code}.json`;
 
 function ensureMaps() {
   if (!global.__mmd_sessionCodes) {
