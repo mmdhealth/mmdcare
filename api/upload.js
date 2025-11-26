@@ -149,8 +149,13 @@ export default async function handler(req, res) {
         console.warn('Upload finished but no session code found for transfer:', transferId);
       }
 
-      console.log('Upload completed successfully, sending 204 response');
-      res.status(204).end();
+      console.log('Upload completed successfully, sending JSON response');
+      res.status(200).json({
+        success: true,
+        transferId,
+        fileCount: transfer.files.length,
+        files: transfer.files
+      });
     } catch (error) {
       console.error('Upload error:', error);
       console.error('Error stack:', error.stack);
