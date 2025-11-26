@@ -36,7 +36,7 @@ function generateSessionCode() {
 }
 
 function isExpired(session) {
-  if (!session?.createdAt) return true;
+  if (!session?.createdAt) return false;
   return Date.now() - Number(session.createdAt) > SESSION_TTL_MS;
 }
 
