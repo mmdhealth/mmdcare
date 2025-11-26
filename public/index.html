@@ -647,10 +647,20 @@
                         addLogEntry('Patienten identifierar sig nu med BankID.');
                     } else if (stage === 'approved') {
                         addLogEntry('Patienten identifierades med BankID.');
+                    } else if (stage === 'uploading') {
+                        addLogEntry('Patienten laddar upp dokument…');
+                    } else if (stage === 'uploaded') {
+                        addLogEntry('Patienten har laddat upp dokument.');
                     }
                     updateStepStatuses(stage);
                     announceStage(stage);
                     updateStatusUI();
+                }
+                if (stage === 'uploading') {
+                    state.uploadingNotified = true;
+                }
+                if (stage === 'uploaded' && !state.uploadDetected) {
+                    handleMobileUploadDetected();
                 }
                 if ((data.patientVerified || stage === 'approved') && !state.patientVerified) {
                     state.patientVerified = true;
@@ -1044,19 +1054,23 @@
                 const data = await res.json();
                 const currentCount = data.files?.length || 0;
                 if (currentCount > state.initialFileCount && currentCount > 0) {
-                    state.uploadDetected = true;
-                    clearPolling();
-                    addLogEntry('🎉 Filer har laddats upp. Översikten öppnas.');
-                    showUploadNotification('Filer mottagna – öppnar översikten', 'success');
-                    localStorage.setItem('currentTransferId', state.transferId);
-                    localStorage.setItem('currentPatientName', state.patientAlias);
-                    if (!state.redirectScheduled) {
-                        state.redirectScheduled = true;
-                        setTimeout(() => window.location.href = 'dashboard.html', 1400);
-                    }
+                    handleMobileUploadDetected();
                 }
             } catch (error) {
                 console.error('Polling error', error);
+            }
+        }
+
+        function handleMobileUploadDetected() {
+            state.uploadDetected = true;
+            clearPolling();
+            addLogEntry('🎉 Filer har laddats upp. Översikten öppnas.');
+            showUploadNotification('Filer mottagna – öppnar översikten', 'success');
+            localStorage.setItem('currentTransferId', state.transferId);
+            localStorage.setItem('currentPatientName', state.patientAlias);
+            if (!state.redirectScheduled) {
+                state.redirectScheduled = true;
+                setTimeout(() => window.location.href = 'dashboard.html', 1200);
             }
         }
 
