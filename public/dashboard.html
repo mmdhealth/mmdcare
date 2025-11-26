@@ -1360,13 +1360,9 @@
                         markWaitingOverlaySeen();
                         finishImportOverlay({ immediate: true });
                         
-                        // Show notification for mobile files
-                        showFileNotification({ size: uploadedFiles[0]?.size || 0, name: uploadedFiles[0]?.name || 'Ny fil' });
-                        
-                        // Load imported journal notes if any PDF files exist
+                        // start excel import flow before showing success
+                        showImportOverlay(uploadedFiles.length, { mode: 'import', force: true });
                         await loadImportedJournalNotes();
-                        
-                        // Load Excel insights - this will show/hide the import overlay as needed
                         await loadExcelInsights(uploadedFiles);
                     } else {
                         // No files found - ensure everything is cleared
