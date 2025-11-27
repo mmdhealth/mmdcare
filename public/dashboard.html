@@ -311,6 +311,9 @@
                 <div id="importProgressBar" class="import-progress-bar"></div>
             </div>
             <p id="importProgressText" class="import-progress-text">Förbereder import...</p>
+            <button id="importOverlayEndButton" class="import-overlay-end-button" type="button">
+                Avsluta session
+            </button>
         </div>
     </div>
 
@@ -334,9 +337,35 @@
             totalSteps: 0,
             mode: null
         };
+        const importOverlayEndButton = document.getElementById('importOverlayEndButton');
+        if (importOverlayEndButton) {
+            importOverlayEndButton.addEventListener('click', () => {
+                finishImportOverlay({ immediate: true });
+                showLogoutOverlay();
+            });
+        }
         const dashboardCharts = {};
         const metricCardElements = {};
         const graphValueElements = {};
+
+        function resolveCurrentTransferId() {
+            if (currentTransferId) {
+                return currentTransferId;
+            }
+            const stored = localStorage.getItem('currentTransferId');
+            if (stored) {
+                currentTransferId = stored;
+                return stored;
+            }
+            return null;
+        }
+
+        function resolveTransferIdForFile(file) {
+            if (file?.transferId) {
+                return file.transferId;
+            }
+            return resolveCurrentTransferId();
+        }
         const excelAnalyticsState = {
             combinedMetrics: null,
             files: []
@@ -1385,6 +1414,15 @@
                 
                 if (response.ok) {
                     const data = await response.json();
+                    if (data.transferId) {
+                        currentTransferId = data.transferId;
+                        localStorage.setItem('currentTransferId', data.transferId);
+                    } else if (!currentTransferId) {
+                        const storedId = localStorage.getItem('currentTransferId');
+                        if (storedId) {
+                            currentTransferId = storedId;
+                        }
+                    }
                     if (data.status === 'cancelled') {
                         handleSessionTerminatedByPatient();
                         return;
@@ -1477,8 +1515,6 @@
         }
 
         async function loadImportedJournalNotes() {
-            if (!currentTransferId) return;
-            
             // Find PDF files in the uploaded files
             const pdfFiles = uploadedFiles.filter(file => 
                 file.mimetype === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
@@ -1494,7 +1530,14 @@
                 for (const pdfFile of pdfFiles) {
                     try {
                         // Load PDF content from mobile app
-                        const response = await fetch(`/api/pdf-content?transferId=${currentTransferId}&filename=${encodeURIComponent(pdfFile.name)}`);
+                        const transferIdForFile = resolveTransferIdForFile(pdfFile);
+                        if (!transferIdForFile) {
+                            console.warn('Saknar transferId för PDF:', pdfFile.name);
+                            const fallbackCard = createBasicPDFCard(pdfFile);
+                            journalContent.appendChild(fallbackCard);
+                            continue;
+                        }
+                        const response = await fetch(`/api/pdf-content?transferId=${encodeURIComponent(transferIdForFile)}&filename=${encodeURIComponent(pdfFile.name)}`);
                         
                         if (response.ok) {
                             const parsedData = await response.json();
@@ -1580,13 +1623,15 @@
             const card = document.createElement('div');
             card.className = 'journal-entry pdf-journal-entry';
             card.style.cursor = 'pointer';
-            card.onclick = () => showPDFPreview(currentTransferId, encodeURIComponent(pdfFile.name), pdfFile.name);
+            const transferIdForFile = resolveTransferIdForFile(pdfFile);
             
             // Use the parsed data from the server
             const title = parsedData.title || generatePDFTitle(parsedData.content, pdfFile.name);
             const doctor = parsedData.doctor || 'Importerad från PDF';
             const date = parsedData.date || new Date(pdfFile.uploadedAt || Date.now()).toLocaleDateString('sv-SE');
             const summary = parsedData.summary || generatePDFSummary(parsedData.content);
+            
+            card.addEventListener('click', () => showPDFPreview(transferIdForFile, pdfFile.name, title));
             
             card.innerHTML = `
                 <div class="journal-header">
@@ -1606,7 +1651,8 @@
             const card = document.createElement('div');
             card.className = 'journal-entry pdf-journal-entry';
             card.style.cursor = 'pointer';
-            card.onclick = () => showPDFPreview(currentTransferId, encodeURIComponent(pdfFile.name), pdfFile.name);
+            const transferIdForFile = resolveTransferIdForFile(pdfFile);
+            card.addEventListener('click', () => showPDFPreview(transferIdForFile, pdfFile.name, pdfFile.name));
             
             const uploadDate = new Date(pdfFile.uploadedAt || Date.now()).toLocaleDateString('sv-SE');
             
@@ -1938,7 +1984,7 @@
         }
 
         async function loadExcelAnalytics(files) {
-            if (!currentTransferId || !Array.isArray(files) || !files.length) return null;
+            if (!Array.isArray(files) || !files.length) return null;
 
             const excelFiles = files.filter(file =>
                 file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
@@ -1951,19 +1997,25 @@
                 return null;
             }
 
+            const activeTransferId = resolveTransferIdForFile(excelFiles[0]);
+            if (!activeTransferId) {
+                console.warn('Kan inte läsa Excel-data utan transferId.');
+                return null;
+            }
+
             showImportOverlay(excelFiles.length, { mode: 'import', force: true });
 
             const parsedFiles = [];
             let completed = 0;
 
             for (const file of excelFiles) {
-                const cacheKey = getExcelCacheKey(currentTransferId, file.name);
+                const cacheKey = getExcelCacheKey(activeTransferId, file.name);
                 let parsed = getCachedExcelData(cacheKey, file.uploadedAt);
 
                 if (!parsed) {
                     try {
                         console.log('Loading Excel file:', file.name);
-                        const url = `/api/excel-content?transferId=${currentTransferId}&filename=${encodeURIComponent(file.name)}&dash=${Date.now()}`;
+                        const url = `/api/excel-content?transferId=${encodeURIComponent(activeTransferId)}&filename=${encodeURIComponent(file.name)}&dash=${Date.now()}`;
                         const resp = await fetch(url, { cache: 'no-store' });
                         if (!resp.ok) {
                             const errorText = await resp.text();
@@ -2060,32 +2112,29 @@
                 fileItem.className = 'file-item-vertical';
                 
                 const fileType = file.mimetype === 'application/pdf' ? 'pdf' : 'excel';
-                const fileDate = new Date(file.uploadedAt).toLocaleDateString('sv-SE');
+                const fileDate = file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString('sv-SE') : 'Okänt datum';
+                const fileSizeKb = typeof file.size === 'number' ? Math.max(1, Math.round(file.size / 1024)) : '–';
+                
+                const fileInfo = document.createElement('div');
+                fileInfo.className = 'file-info';
+                fileInfo.innerHTML = `
+                    <div class="file-name file-type-${fileType}">${file.name}</div>
+                    <div class="file-details">
+                        <span class="file-date">${fileDate}</span>
+                        <span class="file-size">${fileSizeKb} KB</span>
+                    </div>
+                `;
                 
                 if (fileType === 'pdf') {
-                    // For PDFs, create a clickable item that shows preview
-                    fileItem.innerHTML = `
-                        <div class="file-info" style="cursor: pointer;" onclick="event.stopPropagation(); showPDFPreview('${currentTransferId}', '${encodeURIComponent(file.name)}', '${file.name}')">
-                            <div class="file-name file-type-${fileType}">${file.name}</div>
-                            <div class="file-details">
-                                <span class="file-date">${fileDate}</span>
-                                <span class="file-size">${Math.round(file.size/1024)} KB</span>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    // For Excel files, just show info
-                    fileItem.innerHTML = `
-                        <div class="file-info">
-                            <div class="file-name file-type-${fileType}">${file.name}</div>
-                            <div class="file-details">
-                                <span class="file-date">${fileDate}</span>
-                                <span class="file-size">${Math.round(file.size/1024)} KB</span>
-                            </div>
-                        </div>
-                    `;
+                    fileInfo.style.cursor = 'pointer';
+                    fileInfo.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        const transferIdForFile = resolveTransferIdForFile(file);
+                        showPDFPreview(transferIdForFile, file.name);
+                    });
                 }
                 
+                fileItem.appendChild(fileInfo);
                 fileList.appendChild(fileItem);
             });
             
@@ -2246,6 +2295,8 @@
             localStorage.removeItem('sessionStartTime');
             localStorage.removeItem('currentTransferId');
             localStorage.removeItem('currentPatientName');
+             localStorage.removeItem('currentSessionCode');
+            currentTransferId = null;
             window.location.href = 'login.html';
         }
 
@@ -2527,6 +2578,11 @@
 
         async function confirmLogout() {
             console.log('LOGOUT: Resetting entire platform - deleting ALL files');
+            try {
+                await notifySessionCancelledOnServer();
+            } catch (error) {
+                console.warn('Failed to notify session cancellation before logout:', error);
+            }
             
             // STEP 1: Clear UI immediately - remove ALL files (PDF and Excel)
             uploadedFiles = [];
@@ -2571,6 +2627,7 @@
                     key.startsWith('patient_transfer_') ||
                     key.startsWith('excel_cache_') ||
                     key === 'currentTransferId' ||
+                    key === 'currentSessionCode' ||
                     key === 'currentPatientName' ||
                     key === 'uploadedFiles' ||
                     key === 'sessionStartTime' ||
@@ -2579,6 +2636,7 @@
                     console.log('Deleted:', key);
                 }
             });
+            localStorage.removeItem('currentSessionCode');
             
             // Clear auth (but keep for login)
             localStorage.removeItem('hasSeenLogin');
@@ -2595,6 +2653,33 @@
             
             // Redirect to login
             window.location.href = 'login.html';
+        }
+
+        async function notifySessionCancelledOnServer() {
+            const sessionCode = localStorage.getItem('currentSessionCode');
+            const transferId = resolveCurrentTransferId();
+            if (!sessionCode && !transferId) {
+                return;
+            }
+            if (sessionCode) {
+                try {
+                    await fetch('/api/session-code/stage', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: sessionCode, stage: 'cancelled' })
+                    });
+                } catch (error) {
+                    console.warn('Failed to update session stage to cancelled:', error);
+                }
+            }
+            if (transferId) {
+                try {
+                    const params = new URLSearchParams({ transferId });
+                    await fetch(`/api/cancel?${params.toString()}`, { method: 'POST' });
+                } catch (error) {
+                    console.warn('Failed to cancel transfer before logout:', error);
+                }
+            }
         }
 
         function initializeJournalCard() {
@@ -2691,7 +2776,12 @@
             // Load each PDF and create entry
             const loadPromises = pdfFiles.map(async (pdfFile) => {
                 try {
-                    const response = await fetch(`/api/pdf-content?transferId=${currentTransferId}&filename=${encodeURIComponent(pdfFile.name)}`);
+                    const transferIdForFile = resolveTransferIdForFile(pdfFile);
+                    if (!transferIdForFile) {
+                        console.warn('Saknar transferId för PDF:', pdfFile.name);
+                        return createBasicPDFCard(pdfFile);
+                    }
+                    const response = await fetch(`/api/pdf-content?transferId=${encodeURIComponent(transferIdForFile)}&filename=${encodeURIComponent(pdfFile.name)}`);
                     if (response.ok) {
                         const parsedData = await response.json();
                         return createPDFJournalCard(pdfFile, parsedData);
@@ -2751,6 +2841,9 @@
 
             if (mode === 'waiting' && !options.force) {
                 if (hasSeenWaitingOverlay()) {
+                    if (importOverlayEndButton) {
+                        importOverlayEndButton.style.display = 'none';
+                    }
                     return;
                 }
                 markWaitingOverlaySeen();
@@ -2768,6 +2861,15 @@
             overlay.classList.add('visible');
             overlay.setAttribute('aria-hidden', 'false');
             document.body.classList.add('import-locked');
+
+            if (importOverlayEndButton) {
+                if (mode === 'waiting') {
+                    importOverlayEndButton.style.display = 'flex';
+                    importOverlayEndButton.disabled = false;
+                } else {
+                    importOverlayEndButton.style.display = 'none';
+                }
+            }
 
             if (mode === 'waiting') {
                 if (titleEl) titleEl.textContent = 'Väntar på uppladdning av data från patient';
@@ -2813,7 +2915,12 @@
         }
 
         function showPDFPreview(transferId, filename, displayName) {
-            // Create overlay for PDF preview
+            const activeTransferId = transferId || resolveCurrentTransferId();
+            if (!activeTransferId || !filename) {
+                console.warn('Kan inte visa PDF utan transferId och filnamn.');
+                return;
+            }
+
             const overlay = document.createElement('div');
             overlay.className = 'pdf-preview-overlay';
             overlay.style.cssText = `
@@ -2850,14 +2957,24 @@
                 justify-content: space-between;
                 align-items: center;
             `;
-            header.innerHTML = `
-                <h3 style="margin: 0; font-size: 18px; font-weight: 600;">${displayName}</h3>
-                <button onclick="this.closest('.pdf-preview-overlay').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
-            `;
+            
+            const titleEl = document.createElement('h3');
+            titleEl.style.cssText = 'margin: 0; font-size: 18px; font-weight: 600;';
+            titleEl.textContent = displayName || filename;
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.style.cssText = 'background: none; border: none; font-size: 24px; cursor: pointer; color: #666;';
+            closeBtn.textContent = '×';
+            closeBtn.addEventListener('click', () => overlay.remove());
+            
+            header.appendChild(titleEl);
+            header.appendChild(closeBtn);
             
             const iframe = document.createElement('iframe');
-            // Use the PDF file endpoint from transfer server
-            iframe.src = `/pdf-file/${transferId}/${filename}`;
+            const transferSegment = encodeURIComponent(activeTransferId);
+            const fileSegment = encodeURIComponent(filename);
+            iframe.src = `/pdf-file/${transferSegment}/${fileSegment}`;
             iframe.style.cssText = `
                 width: 100%;
                 height: calc(90vh - 60px);
@@ -2885,6 +3002,10 @@
             if (importOverlayState.timerId) {
                 clearInterval(importOverlayState.timerId);
                 importOverlayState.timerId = null;
+            }
+
+            if (importOverlayEndButton) {
+                importOverlayEndButton.style.display = 'none';
             }
 
             const hideOverlay = () => {

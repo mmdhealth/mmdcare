@@ -882,6 +882,7 @@
                 selectors.endSessionButton.textContent = 'Avslutar...';
             }
             try {
+                await updateSessionStage('cancelled');
                 const params = new URLSearchParams({ transferId: state.transferId });
                 await fetch(`/api/cancel?${params.toString()}`, { method: 'POST' });
             } catch (error) {

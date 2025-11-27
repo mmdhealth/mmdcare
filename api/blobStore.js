@@ -16,7 +16,7 @@ export const hasBlobAccess = () => {
   );
 };
 
-export async function loadTransferFromBlob(transferId) {
+export async function loadTransferFromBlob(transferId, { cacheBust = true } = {}) {
   if (!hasBlobAccess()) {
     console.error('❌ BLOB ACCESS DENIED - Cannot load transfer. VERCEL env:', process.env.VERCEL);
     return null;
@@ -29,7 +29,16 @@ export async function loadTransferFromBlob(transferId) {
       console.log('Transfer not found in Blob:', key);
       return null;
     }
-    const res = await fetch(meta.url, { cache: 'no-store' });
+    let fetchUrl = meta.url;
+    if (cacheBust) {
+      const urlObj = new URL(meta.url);
+      urlObj.searchParams.set('ts', Date.now().toString());
+      fetchUrl = urlObj.toString();
+    }
+    const res = await fetch(fetchUrl, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
     if (!res.ok) {
       console.log('Failed to fetch transfer from Blob URL:', res.status);
       return null;

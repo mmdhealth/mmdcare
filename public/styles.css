@@ -403,6 +403,10 @@ body {
     width: auto;
 }
 
+.sidebar-header .logo {
+    filter: brightness(0) saturate(100%) invert(11%) sepia(14%) saturate(1208%) hue-rotate(196deg) brightness(94%) contrast(93%);
+}
+
 .logo-text {
     font-size: 20px;
     font-weight: 600;
@@ -2009,6 +2013,30 @@ body {
     margin: 0;
     font-size: 14px;
     color: rgba(248, 250, 252, 0.85);
+}
+
+.import-overlay-end-button {
+    display: none;
+    width: 100%;
+    margin-top: 24px;
+    border: none;
+    border-radius: 12px;
+    background: #0F172A;
+    color: #FFFFFF;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.import-overlay-end-button:hover {
+    background: #1E3A8A;
+}
+
+.import-overlay-end-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 body.import-locked {
     overflow: hidden;
