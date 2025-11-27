@@ -2021,17 +2021,20 @@ body {
     margin-top: 24px;
     border: none;
     border-radius: 12px;
-    background: #0F172A;
+    background: #DC2626;
     color: #FFFFFF;
     font-size: 15px;
     font-weight: 600;
     padding: 14px 16px;
     cursor: pointer;
     transition: background 0.2s ease, transform 0.2s ease;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
 }
 
 .import-overlay-end-button:hover {
-    background: #1E3A8A;
+    background: #B91C1C;
 }
 
 .import-overlay-end-button:disabled {

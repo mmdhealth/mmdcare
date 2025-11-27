@@ -369,6 +369,33 @@
             }
             return resolveCurrentTransferId();
         }
+
+        async function ensureActiveTransferId() {
+            const existing = resolveCurrentTransferId();
+            if (existing) {
+                return existing;
+            }
+            const sessionCode = localStorage.getItem('currentSessionCode');
+            if (!sessionCode) {
+                return null;
+            }
+            try {
+                const response = await fetch(`/api/session-code?code=${encodeURIComponent(sessionCode)}`, {
+                    cache: 'no-store'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.transferId) {
+                        currentTransferId = data.transferId;
+                        localStorage.setItem('currentTransferId', data.transferId);
+                        return data.transferId;
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to resolve transferId from session code:', error);
+            }
+            return null;
+        }
         const excelAnalyticsState = {
             combinedMetrics: null,
             files: []
@@ -1387,8 +1414,6 @@
                 console.log('No session code or transfer ID available for loading files');
                 uploadedFiles = [];
                 updateFileDisplay();
-                // Clear overlay flag so it shows again when files are uploaded
-                resetWaitingOverlaySeen(true);
                 finishImportOverlay({ immediate: true });
                 return;
             }
@@ -1472,8 +1497,6 @@
                         updateFileCount();
                         updateProvsvarStatus();
                         console.log('No files found for this transfer - clean state');
-                        // Clear overlay flag so it shows again when files are uploaded
-                        resetWaitingOverlaySeen(true);
                         if (currentTransferId) {
                             showImportOverlay(0, { mode: 'waiting' });
                         } else {
@@ -1904,7 +1927,6 @@
             categoriesContainer.innerHTML = '';
             
             const categoryConfigs = [
-                { key: 'excel', name: 'Data', icon: '' },
                 { key: 'pdf', name: 'Journalanteckningar', icon: '' }
             ];
 
@@ -2000,7 +2022,7 @@
                 return null;
             }
 
-            const activeTransferId = resolveTransferIdForFile(excelFiles[0]);
+            const activeTransferId = await ensureActiveTransferId();
             if (!activeTransferId) {
                 console.warn('Kan inte läsa Excel-data utan transferId.');
                 return null;
@@ -2644,6 +2666,7 @@
             // Clear auth (but keep for login)
             localStorage.removeItem('hasSeenLogin');
             localStorage.removeItem('mmdcare_auth');
+            resetWaitingOverlaySeen(true);
             
             console.log('✅ Platform completely reset - all files deleted');
             
