@@ -282,6 +282,9 @@
                             </div>
                         </div>
                     </div>
+                    <div id="file-categories" class="file-categories">
+                        <p class="empty-category">Inga filer att visa</p>
+                    </div>
                 </div>
             </div>
         </main>
@@ -2838,12 +2841,14 @@
             const mode = options.mode || 'import';
             const { overlay, progressBar, progressText, titleEl, copyEl, trackEl, iconEl } = getImportOverlayElements();
             if (!overlay) return;
+            const shouldShowEndButton = mode === 'waiting';
+            if (importOverlayEndButton) {
+                importOverlayEndButton.style.display = shouldShowEndButton ? 'flex' : 'none';
+                importOverlayEndButton.disabled = !shouldShowEndButton;
+            }
 
             if (mode === 'waiting' && !options.force) {
                 if (hasSeenWaitingOverlay()) {
-                    if (importOverlayEndButton) {
-                        importOverlayEndButton.style.display = 'none';
-                    }
                     return;
                 }
                 markWaitingOverlaySeen();
@@ -2861,15 +2866,6 @@
             overlay.classList.add('visible');
             overlay.setAttribute('aria-hidden', 'false');
             document.body.classList.add('import-locked');
-
-            if (importOverlayEndButton) {
-                if (mode === 'waiting') {
-                    importOverlayEndButton.style.display = 'flex';
-                    importOverlayEndButton.disabled = false;
-                } else {
-                    importOverlayEndButton.style.display = 'none';
-                }
-            }
 
             if (mode === 'waiting') {
                 if (titleEl) titleEl.textContent = 'Väntar på uppladdning av data från patient';
