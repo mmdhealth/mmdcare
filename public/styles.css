@@ -2850,6 +2850,14 @@ body.import-locked {
     word-break: break-word;
 }
 
+.file-category-list .file-item-vertical {
+    cursor: pointer;
+}
+
+.file-category-list .file-item-vertical:hover {
+    background: #f1f5f9;
+}
+
 .file-size {
     color: #6b7280;
     font-size: 12px;

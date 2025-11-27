@@ -1,6 +1,6 @@
 // Local API endpoint for PDF content parsing
 import { loadTransferFromBlob } from './blobStore.js';
-import { get, head } from '@vercel/blob';
+import { head } from '@vercel/blob';
 import pdf from 'pdf-parse';
 import { Buffer } from 'buffer';
 

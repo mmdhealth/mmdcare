@@ -492,7 +492,9 @@
             initializeMetricsTabs();
             registerMetricCardElements();
             registerGraphValueElements();
-            showImportOverlay(0, { mode: 'waiting' });
+            if (!hasSeenWaitingOverlay()) {
+                showImportOverlay(0, { mode: 'waiting' });
+            }
             
             // Initialize Journalanteckningar card click handler
             initializeJournalCard();
@@ -601,7 +603,9 @@
                         uploadedFiles = [];
                         updateFileDisplay();
                         // Ensure waiting overlay is visible while we wait for the first file
-                        showImportOverlay(0, { mode: 'waiting', force: true });
+                        if (!hasSeenWaitingOverlay()) {
+                            showImportOverlay(0, { mode: 'waiting', force: true });
+                        }
                         startFileEventStream();
                     } else {
                         // Other error – log and fall back to empty state but keep ID if possible
@@ -612,7 +616,9 @@
                         }
                         uploadedFiles = [];
                         updateFileDisplay();
-                        showImportOverlay(0, { mode: 'waiting', force: true });
+                        if (!hasSeenWaitingOverlay()) {
+                            showImportOverlay(0, { mode: 'waiting', force: true });
+                        }
                         startFileEventStream();
                     }
                 } catch (error) {
@@ -623,7 +629,9 @@
                     }
                     uploadedFiles = [];
                     updateFileDisplay();
-                    showImportOverlay(0, { mode: 'waiting', force: true });
+                    if (!hasSeenWaitingOverlay()) {
+                        showImportOverlay(0, { mode: 'waiting', force: true });
+                    }
                     startFileEventStream();
                 }
             } else {
@@ -659,7 +667,9 @@
             resetGraphValues();
             resetCharts();
             if (currentTransferId) {
-                showImportOverlay(0, { mode: 'waiting' });
+                if (!hasSeenWaitingOverlay()) {
+                    showImportOverlay(0, { mode: 'waiting' });
+                }
             } else {
                 finishImportOverlay({ immediate: true });
             }
@@ -1671,7 +1681,9 @@
                         updateProvsvarStatus();
                         console.log('No files found for this transfer - clean state');
                         if (currentTransferId) {
-                            showImportOverlay(0, { mode: 'waiting' });
+                            if (!hasSeenWaitingOverlay()) {
+                                showImportOverlay(0, { mode: 'waiting' });
+                            }
                         } else {
                             finishImportOverlay({ immediate: true });
                         }
@@ -1690,7 +1702,9 @@
                     updateProvsvarStatus();
                     console.log('API failed - cleared all data');
                     if (currentTransferId) {
-                        showImportOverlay(0, { mode: 'waiting' });
+                        if (!hasSeenWaitingOverlay()) {
+                            showImportOverlay(0, { mode: 'waiting' });
+                        }
                     } else {
                         finishImportOverlay({ immediate: true });
                     }
@@ -1705,7 +1719,9 @@
                 updateFileCount();
                 updateProvsvarStatus();
                 if (currentTransferId) {
-                    showImportOverlay(0, { mode: 'waiting' });
+                    if (!hasSeenWaitingOverlay()) {
+                        showImportOverlay(0, { mode: 'waiting' });
+                    }
                 } else {
                     finishImportOverlay({ immediate: true });
                 }
@@ -2290,63 +2306,28 @@
 
         function createCategoryElement(config, files) {
             const div = document.createElement('div');
-            div.className = 'file-category-expandable';
-            
-            const header = document.createElement('div');
-            header.className = 'category-header';
-            header.innerHTML = `
-                <div class="category-title-row">
-                    <h3 class="category-title">${config.name}</h3>
-                    <span class="file-count">${files.length}</span>
-                </div>
-                <div class="chevron">›</div>
-            `;
-            
+            div.className = 'file-category-list';
             const fileList = document.createElement('div');
             fileList.className = 'file-list-vertical';
-            fileList.style.display = 'none'; // Initially hidden
-            
             files.forEach(file => {
                 const fileItem = document.createElement('div');
                 fileItem.className = 'file-item-vertical';
-                
-                const fileType = file.mimetype === 'application/pdf' ? 'pdf' : 'excel';
-                const fileDate = file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString('sv-SE') : 'Okänt datum';
-                const fileSizeKb = typeof file.size === 'number' ? Math.max(1, Math.round(file.size / 1024)) : '–';
-                
-                const fileInfo = document.createElement('div');
-                fileInfo.className = 'file-info';
-                fileInfo.innerHTML = `
-                    <div class="file-name file-type-${fileType}">${file.name}</div>
-                    <div class="file-details">
-                        <span class="file-date">${fileDate}</span>
-                        <span class="file-size">${fileSizeKb} KB</span>
+                fileItem.innerHTML = `
+                    <div class="file-info">
+                        <div class="file-name file-type-pdf">${file.name}</div>
+                        <div class="file-details">
+                            <span class="file-date">${file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString('sv-SE') : 'Okänt datum'}</span>
+                            <span class="file-size">${typeof file.size === 'number' ? Math.max(1, Math.round(file.size / 1024)) : '–'} KB</span>
+                        </div>
                     </div>
                 `;
-                
-                if (fileType === 'pdf') {
-                    fileInfo.style.cursor = 'pointer';
-                    fileInfo.addEventListener('click', (event) => {
-                        event.stopPropagation();
-                        const transferIdForFile = resolveTransferIdForFile(file);
-                        showPDFPreview(transferIdForFile, file.name);
-                    });
-                }
-                
-                fileItem.appendChild(fileInfo);
+                fileItem.addEventListener('click', () => {
+                    const transferIdForFile = resolveTransferIdForFile(file);
+                    showPDFPreview(transferIdForFile, file.name, file.name);
+                });
                 fileList.appendChild(fileItem);
             });
-            
-            // Add click handler for expand/collapse
-            header.addEventListener('click', () => {
-                const isExpanded = fileList.style.display !== 'none';
-                fileList.style.display = isExpanded ? 'none' : 'flex';
-                div.classList.toggle('expanded', !isExpanded);
-            });
-            
-            div.appendChild(header);
             div.appendChild(fileList);
-            
             return div;
         }
 
@@ -3165,9 +3146,9 @@
             header.appendChild(closeBtn);
             
             const iframe = document.createElement('iframe');
-            const transferSegment = encodeURIComponent(activeTransferId);
-            const fileSegment = encodeURIComponent(filename);
-            iframe.src = `/pdf-file/${transferSegment}/${fileSegment}`;
+            const encodedName = encodeURIComponent(filename);
+            const url = `/api/pdf-file?transferId=${encodeURIComponent(activeTransferId)}&filename=${encodedName}`;
+            iframe.src = url;
             iframe.style.cssText = `
                 width: 100%;
                 height: calc(90vh - 60px);
