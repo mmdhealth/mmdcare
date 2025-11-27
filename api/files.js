@@ -1,5 +1,5 @@
 // Local API endpoint for retrieving uploaded files
-import { loadTransferFromBlob } from './blobStore.js';
+import { loadTransferFromBlob, listTransferFiles } from './blobStore.js';
 import { getSessionByCode } from './sessionStore.js';
 
 export default async function handler(req, res) {
@@ -40,14 +40,19 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Transfer not found' });
     }
 
-    const fileCount = Array.isArray(transfer.files) ? transfer.files.length : 0;
+    let files = Array.isArray(transfer.files) ? transfer.files : [];
+    const listedFiles = await listTransferFiles(transferId);
+    if (listedFiles.length) {
+      files = listedFiles;
+    }
+    const fileCount = files.length;
     console.log('✅ Transfer loaded -', fileCount, 'files found');
-    console.log('Transfer files:', transfer.files?.map(f => f.name) || []);
+    console.log('Transfer files:', files.map(f => f.name));
 
     const response = {
       transferId,
       status: transfer.status || 'open',
-      files: Array.isArray(transfer.files) ? transfer.files : []
+      files
     };
     
     console.log('📤 Returning files response -', response.files.length, 'files');

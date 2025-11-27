@@ -1,9 +1,15 @@
 // Simple Vercel Blob JSON store for transfer metadata
 // Key layout: transfers/{transferId}.json
 
-import { put, head, del } from '@vercel/blob';
+import { put, head, del, list } from '@vercel/blob';
 
 const buildKey = (transferId) => `transfers/${transferId}.json`;
+
+function ensureTransferCache() {
+  if (!global.__mmd_transfers) {
+    global.__mmd_transfers = new Map();
+  }
+}
 
 export const hasBlobAccess = () => {
   // In Vercel production, VERCEL env var is always set to "1"
@@ -16,7 +22,15 @@ export const hasBlobAccess = () => {
   );
 };
 
-export async function loadTransferFromBlob(transferId, { cacheBust = true } = {}) {
+export async function loadTransferFromBlob(transferId, { cacheBust = true, forceRefresh = false } = {}) {
+  ensureTransferCache();
+  if (!forceRefresh && global.__mmd_transfers.has(transferId)) {
+    const cached = global.__mmd_transfers.get(transferId);
+    if (cached) {
+      // Return a clone so callers can't mutate the cached object
+      return JSON.parse(JSON.stringify(cached));
+    }
+  }
   if (!hasBlobAccess()) {
     console.error('❌ BLOB ACCESS DENIED - Cannot load transfer. VERCEL env:', process.env.VERCEL);
     return null;
@@ -44,6 +58,16 @@ export async function loadTransferFromBlob(transferId, { cacheBust = true } = {}
       return null;
     }
     const data = await res.json();
+    if (data) {
+      global.__mmd_transfers.set(transferId, data);
+    }
+    if (!Array.isArray(data?.files) || data.files.length === 0) {
+      const rebuiltFiles = await listTransferFiles(transferId);
+      if (rebuiltFiles.length) {
+        data.files = rebuiltFiles;
+        global.__mmd_transfers.set(transferId, data);
+      }
+    }
     console.log('✅ Transfer loaded from Blob:', key, 'files:', data.files?.length || 0);
     return data;
   } catch (err) {
@@ -54,6 +78,7 @@ export async function loadTransferFromBlob(transferId, { cacheBust = true } = {}
 }
 
 export async function saveTransferToBlob(transferId, transfer) {
+  ensureTransferCache();
   if (!hasBlobAccess()) {
     console.error('❌ BLOB ACCESS DENIED - Cannot save transfer. VERCEL env:', process.env.VERCEL);
     throw new Error('Blob storage not available - cannot persist transfer');
@@ -77,6 +102,7 @@ export async function saveTransferToBlob(transferId, transfer) {
   });
   
   console.log('✅ Transfer saved to Blob:', key, '-', transfer.files.length, 'files');
+  global.__mmd_transfers.set(transferId, transfer);
 }
 
 export function createEmptyTransfer() {
@@ -84,6 +110,7 @@ export function createEmptyTransfer() {
 }
 
 export async function deleteTransferFromBlob(transferId) {
+  ensureTransferCache();
   if (!hasBlobAccess()) return;
   const transfer = await loadTransferFromBlob(transferId);
   if (transfer?.files) {
@@ -108,6 +135,45 @@ export async function deleteTransferFromBlob(transferId) {
       console.error(`Failed to delete transfer metadata for ${transferId}:`, err);
     }
   }
+  global.__mmd_transfers.delete(transferId);
+}
+
+export async function listTransferFiles(transferId) {
+  if (!hasBlobAccess()) {
+    return [];
+  }
+  const prefix = `files/${transferId}/`;
+  let cursor;
+  const files = [];
+  try {
+    do {
+      const result = await list({ prefix, cursor });
+      const blobs = result?.blobs || [];
+      blobs.forEach(blob => {
+        if (!blob?.pathname || !blob.pathname.startsWith(prefix)) {
+          return;
+        }
+        const fileName = decodeURIComponent(blob.pathname.slice(prefix.length));
+        if (!fileName) {
+          return;
+        }
+        files.push({
+          name: fileName,
+          size: blob.size ?? 0,
+          mimetype: blob.contentType || 'application/octet-stream',
+          uploadedAt: blob.uploadedAt || new Date().toISOString(),
+          transferId,
+          url: blob.downloadUrl || blob.url || null,
+          blobKey: blob.pathname
+        });
+      });
+      cursor = result?.cursor;
+    } while (cursor);
+  } catch (error) {
+    console.warn('Failed to list transfer files for', transferId, error?.message);
+    return [];
+  }
+  return files;
 }
 
 export async function deletePatientTransferMapping(patientId) {
