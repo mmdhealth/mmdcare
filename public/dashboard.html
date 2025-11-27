@@ -1231,8 +1231,6 @@
             return date.toLocaleDateString('sv-SE', { month: 'short', day: 'numeric' });
         }
 
-        const MAX_HEART_RATE_POINTS = 60;
-
         function maybeAggregateTrendSeries(entries, options = {}) {
             if (!Array.isArray(entries) || !entries.length) return [];
             const { maxPoints = MAX_HEART_RATE_POINTS } = options;
@@ -1371,6 +1369,181 @@
                     afBurden: []
                 }
             };
+        }
+
+        const MAX_HEART_RATE_POINTS = 60;
+
+        const METRIC_FALLBACK_MAPPINGS = [
+            { key: 'weight', unit: 'kg', min: 20, max: 400, matchers: ['weight', 'vikt', 'kg', 'body mass'] },
+            { key: 'heartRate', unit: 'bpm', min: 25, max: 260, matchers: ['heart rate', 'hjärtfrekvens', 'pulse', 'puls', 'hr'] },
+            { key: 'oxygenSaturation', unit: '%', min: 60, max: 100, matchers: ['spo2', 'oxygen', 'syres', 'saturation', 'sat'] },
+            { key: 'ldl', unit: 'mmol/L', min: 0, max: 20, matchers: ['ldl', 'ldl-kolesterol', 'ldl cholesterol'] },
+            { key: 'hdl', unit: 'mmol/L', min: 0, max: 20, matchers: ['hdl', 'hdl-kolesterol', 'hdl cholesterol'] },
+            { key: 'totalCholesterol', unit: 'mmol/L', min: 0, max: 30, matchers: ['kolesterol', 'cholesterol', 'total cholesterol'] },
+            { key: 'triglycerides', unit: 'mmol/L', min: 0, max: 50, matchers: ['triglycerid', 'triglyceride'] },
+            { key: 'glucose', unit: 'mmol/L', min: 0, max: 80, matchers: ['glucose', 'glukos', 'hba1c', 'blood sugar', 'blodsocker'] },
+            { key: 'egfr', unit: 'mL/min', min: 0, max: 200, matchers: ['egfr'] },
+            { key: 'steps', unit: 'steg', min: 0, max: 500000, matchers: ['steps', 'steg'] },
+            { key: 'sleep', unit: 'h', min: 0, max: 24, matchers: ['sleep', 'sömn'] },
+            { key: 'afBurden', unit: '%', min: 0, max: 100, matchers: ['af', 'atrial', 'fibrillation', 'rytm'] },
+            { key: 'bloodPressure', unit: 'mmHg', min: 60, max: 300, matchers: ['blood pressure', 'blodtryck', 'bp', 'rr'] }
+        ];
+
+        const DEFAULT_METRIC_UNITS = {
+            weight: 'kg',
+            heartRate: 'bpm',
+            oxygenSaturation: '%',
+            ldl: 'mmol/L',
+            hdl: 'mmol/L',
+            totalCholesterol: 'mmol/L',
+            triglycerides: 'mmol/L',
+            glucose: 'mmol/L',
+            egfr: 'mL/min',
+            steps: 'steg',
+            sleep: 'h',
+            afBurden: '%'
+        };
+
+        function ensureParsedExcelHasMetrics(parsed) {
+            if (!parsed) return parsed;
+            if (parsed.metrics && parsed.metrics.latest) {
+                return parsed;
+            }
+            const metrics = createEmptyCombinedMetrics();
+            const timestamp = parsed.uploadedAt || parsed.parsedAt || new Date().toISOString();
+            const heart = parsed.heartData || {};
+            if (heart.systolicBP || heart.diastolicBP) {
+                addBloodPressureSample(metrics, heart.systolicBP, heart.diastolicBP, { timestamp });
+            }
+            if (heart.heartRate) {
+                addMetricSample(metrics, 'heartRate', heart.heartRate, { unit: 'bpm', timestamp });
+            }
+            if (heart.cholesterolLDL) {
+                addMetricSample(metrics, 'ldl', Number(heart.cholesterolLDL), { unit: 'mmol/L', timestamp });
+            }
+            if (Array.isArray(heart.heartRateOverTime)) {
+                heart.heartRateOverTime.slice(0, MAX_HEART_RATE_POINTS).forEach((point, index) => {
+                    if (point && typeof point.value === 'number') {
+                        addMetricSample(metrics, 'heartRate', point.value, {
+                            unit: 'bpm',
+                            timestamp: point.timestamp || timestamp,
+                            order: index
+                        });
+                    }
+                });
+            }
+            ingestDynamicMetrics(parsed.dynamicData, metrics, timestamp);
+            parsed.metrics = metrics;
+            return parsed;
+        }
+
+        function ingestDynamicMetrics(dynamicData = {}, metrics, timestamp) {
+            if (!dynamicData || typeof dynamicData !== 'object') return;
+            Object.entries(dynamicData).forEach(([label, rawValue], index) => {
+                const mapping = mapDynamicLabelToMetric(label);
+                if (!mapping) return;
+                const numericValue = coerceNumericValue(rawValue);
+                if (numericValue === null) return;
+                if (mapping.key === 'bloodPressure') {
+                    const bp = parseBloodPressureValue(rawValue);
+                    if (bp) {
+                        addBloodPressureSample(metrics, bp.systolic, bp.diastolic, { timestamp, order: index });
+                    }
+                    return;
+                }
+                if (!isValueInRange(numericValue, mapping)) {
+                    return;
+                }
+                addMetricSample(metrics, mapping.key, numericValue, {
+                    unit: mapping.unit,
+                    timestamp,
+                    order: index
+                });
+            });
+        }
+
+        function mapDynamicLabelToMetric(label) {
+            if (!label) return null;
+            const normalized = String(label).toLowerCase();
+            return METRIC_FALLBACK_MAPPINGS.find(mapping =>
+                mapping.matchers.some(matcher => normalized.includes(matcher))
+            ) || null;
+        }
+
+        function coerceNumericValue(value) {
+            if (typeof value === 'number') return value;
+            if (typeof value !== 'string') return null;
+            const normalized = value.replace(',', '.').trim();
+            if (!normalized) return null;
+            const parsed = parseFloat(normalized);
+            return Number.isNaN(parsed) ? null : parsed;
+        }
+
+        function parseBloodPressureValue(value) {
+            if (typeof value === 'object' && value) {
+                const { systolic, diastolic } = value;
+                if (typeof systolic === 'number' || typeof diastolic === 'number') {
+                    return {
+                        systolic: typeof systolic === 'number' ? systolic : null,
+                        diastolic: typeof diastolic === 'number' ? diastolic : null
+                    };
+                }
+            }
+            const asString = String(value || '').trim();
+            if (!asString) return null;
+            const parts = asString.split(/[\/\-]/).map(part => parseFloat(part.replace(',', '.')));
+            if (parts.length >= 2) {
+                const [systolic, diastolic] = parts;
+                if (!Number.isNaN(systolic) && !Number.isNaN(diastolic)) {
+                    return { systolic, diastolic };
+                }
+            }
+            if (parts.length === 1 && !Number.isNaN(parts[0])) {
+                return { systolic: parts[0], diastolic: null };
+            }
+            return null;
+        }
+
+        function isValueInRange(value, mapping) {
+            if (typeof value !== 'number') return false;
+            if (typeof mapping.min === 'number' && value < mapping.min) return false;
+            if (typeof mapping.max === 'number' && value > mapping.max) return false;
+            return true;
+        }
+
+        function addMetricSample(metrics, key, value, { unit, timestamp, order } = {}) {
+            if (typeof value !== 'number' || Number.isNaN(value)) return;
+            const resolvedUnit = unit || DEFAULT_METRIC_UNITS[key] || '';
+            metrics.latest[key] = {
+                value,
+                unit: resolvedUnit,
+                timestamp
+            };
+            if (Array.isArray(metrics.trends[key])) {
+                metrics.trends[key].push({
+                    value,
+                    unit: resolvedUnit,
+                    timestamp,
+                    order: typeof order !== 'undefined' ? order : Date.parse(timestamp) || Date.now()
+                });
+            }
+        }
+
+        function addBloodPressureSample(metrics, systolic, diastolic, { timestamp, order } = {}) {
+            if (systolic == null && diastolic == null) return;
+            metrics.latest.bloodPressure = {
+                systolic: systolic ?? null,
+                diastolic: diastolic ?? null,
+                unit: 'mmHg',
+                timestamp
+            };
+            metrics.trends.bloodPressure.push({
+                systolic: systolic ?? null,
+                diastolic: diastolic ?? null,
+                unit: 'mmHg',
+                timestamp,
+                order: typeof order !== 'undefined' ? order : Date.parse(timestamp) || Date.now()
+            });
         }
 
         function mergeBloodPressureLatest(targetLatest, candidate) {
@@ -2048,6 +2221,7 @@
                             throw new Error(`Failed to load excel data (${resp.status}): ${errorText}`);
                         }
                         parsed = await resp.json();
+                        parsed = ensureParsedExcelHasMetrics(parsed);
                         console.log('Excel data loaded successfully:', parsed);
                         if (parsed.error) {
                             console.error('Excel parsing error:', parsed.error, parsed.details);
